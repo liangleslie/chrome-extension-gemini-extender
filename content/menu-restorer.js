@@ -30,7 +30,7 @@ function extractChatIdFromElement(el) {
     if (!el) return null;
     let current = el;
     let depth = 0;
-    while (current && current !== document.body && depth < 5) {
+    while (current && current !== document.body && depth < 8) {
         // Check if current itself is the <a> tag
         if (current.tagName === 'A') {
             const href = current.getAttribute('href') || current.href;
