@@ -1,0 +1,46 @@
+{
+  "manifest_version": 3,
+  "name": "Gemini Enterprise Extended",
+  "version": "1.0",
+  "description": "Chrome Extension (Manifest V3) designed to enhance the Google Gemini web interface.",
+  "permissions": [
+    "sidePanel",
+    "storage",
+    "activeTab"
+  ],
+  "background": {
+    "service_worker": "background/service-worker.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://gemini.google.com/*"
+      ],
+      "js": [
+        "content/dom-selectors.js",
+        "utils/json-parser.js",
+        "content/menu-restorer.js",
+        "content/content.js"
+      ]
+    }
+  ],
+  "side_panel": {
+    "default_path": "sidepanel/sidepanel.html"
+  },
+  "icons": {
+    "16": "assets/icon-16.jpg",
+    "48": "assets/icon-48.jpg",
+    "128": "assets/icon-128.jpg"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "assets/*.md",
+        "content/main-world-injector.js"
+      ],
+      "matches": [
+        "https://gemini.google.com/*"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gemini Extended</title>
+    <link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Prompt Builder</h1>
+        <textarea id="prompt-input" placeholder="Enter your prompt context here..."></textarea>
+        <button id="submit-prompt">Submit to Gemini</button>
+        
+        <div class="divider" style="margin: 8px 0; border-top: 1px solid #dadce0;"></div>
+        
+        <h1>Context Attachments</h1>
+        <button id="attach-md-btn" style="background-color: #34a853;">Attach Prompt Pattern Catalogs</button>
+        
+        <div id="dynamic-controls">
+            <!-- Dynamic buttons generated from JSON will appear here -->
+        </div>
+    </div>
+    <script src="sidepanel.js"></script>
+</body>
+</html>
