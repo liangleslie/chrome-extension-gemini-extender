@@ -35,8 +35,7 @@
   "web_accessible_resources": [
     {
       "resources": [
-        "assets/*.md",
-        "content/main-world-injector.js"
+        "assets/*.md"
       ],
       "matches": [
         "https://gemini.google.com/*"

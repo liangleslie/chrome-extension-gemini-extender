@@ -4,16 +4,34 @@
 console.log("Content script loaded in Gemini workspace");
 
 async function simulateNativeFileUpload(filePaths) {
-    const fileUrls = filePaths.map(path => chrome.runtime.getURL(path));
-    
-    const script = document.createElement('script');
-    script.src = chrome.runtime.getURL('content/main-world-injector.js');
-    script.dataset.fileUrls = JSON.stringify(fileUrls);
-    script.dataset.chatInputSelector = window.DOM_SELECTORS.chatInput;
-    
-    document.documentElement.appendChild(script);
-    script.remove();
-    console.log("[Extension] Main world script URL injected.");
+    const dataTransfer = new DataTransfer();
+
+    for (const path of filePaths) {
+        const url = chrome.runtime.getURL(path);
+        const response = await fetch(url);
+        const blob = await response.blob();
+        
+        const rawFileName = path.split('/').pop();
+        const decodedName = decodeURIComponent(rawFileName);
+        
+        const mimeType = blob.type || 'text/markdown';
+        const file = new File([blob], decodedName, { type: mimeType });
+        
+        dataTransfer.items.add(file);
+    }
+
+    const fileInput = document.querySelector('input[type="file"]');
+    if (fileInput) {
+        fileInput.files = dataTransfer.files;
+        fileInput.dispatchEvent(new Event('change', { bubbles: true }));
+        console.log("[Extension] Attached files via hidden input.");
+    } else {
+        const dropTarget = document.querySelector('chat-app') || document.body;
+        dropTarget.dispatchEvent(new DragEvent('dragenter', { bubbles: true, cancelable: true, dataTransfer }));
+        dropTarget.dispatchEvent(new DragEvent('dragover', { bubbles: true, cancelable: true, dataTransfer }));
+        dropTarget.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer }));
+        console.log("[Extension] Attached files via drag-and-drop simulation.");
+    }
 }
 
 function setChatInputText(text) {
