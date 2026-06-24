@@ -143,7 +143,13 @@ Output results.json within a markdown codeblock:
       "options": ["Option A", "Option B", "Option C"] 
     }
   ], 
-  "final_prompt": "<The generated prompt, or null if not confident>" 
+  "final_prompt": 
+    {
+        "final_prompt": "<The generated prompt, or null if not confident>", 
+        "category": "<category of prompt, e.g. writing, summarization, coding, etc.>", 
+        "tags": ["tag1", "tag2", "tag3"], 
+        "summary": "<summary of prompt>"
+    }
 }
 
 User Task:
@@ -218,3 +224,166 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         return true;
     }
 });
+
+// Floating Peek & FAB Side Panel Launcher Injection
+function initializeFloatingLauncher() {
+    // Avoid double injection
+    if (document.getElementById('gemini-extender-launcher')) return;
+
+    // Notify service worker of page reload to close stale sidepanel window
+    chrome.runtime.sendMessage({ action: 'PAGE_RELOADED' }).catch(err => console.log("PAGE_RELOADED error:", err));
+
+    // Create style element
+    const styleEl = document.createElement('style');
+    styleEl.textContent = `
+        #gemini-extender-launcher {
+          position: fixed;
+          bottom: 24px;
+          right: 24px;
+          z-index: 9999999;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          background: linear-gradient(135deg, #1a73e8, #7c4dff);
+          color: white;
+          border-radius: 28px;
+          box-shadow: 0 6px 20px rgba(26, 115, 232, 0.35);
+          cursor: pointer;
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+          box-sizing: border-box;
+          padding: 8px 16px 8px 10px;
+          transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+          width: 250px;
+          height: 56px;
+          overflow: hidden;
+          user-select: none;
+        }
+        #gemini-extender-launcher:hover {
+          box-shadow: 0 8px 24px rgba(124, 77, 255, 0.5);
+          transform: translateY(-2px);
+        }
+        #gemini-extender-launcher .launcher-icon-container {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 38px;
+          height: 38px;
+          border-radius: 50%;
+          background: rgba(255, 255, 255, 0.2);
+          flex-shrink: 0;
+          transition: transform 0.3s ease;
+        }
+        #gemini-extender-launcher:hover .launcher-icon-container {
+          transform: rotate(20deg) scale(1.1);
+        }
+        #gemini-extender-launcher .launcher-text-container {
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          transition: opacity 0.3s ease, transform 0.3s ease;
+          opacity: 1;
+          transform: scale(1);
+          white-space: nowrap;
+        }
+        #gemini-extender-launcher .launcher-title {
+          font-size: 13px;
+          font-weight: 600;
+          letter-spacing: 0.2px;
+        }
+        #gemini-extender-launcher .launcher-subtitle {
+          font-size: 10px;
+          opacity: 0.8;
+          margin-top: 1px;
+        }
+        /* Collapsed (FAB) State */
+        #gemini-extender-launcher.collapsed {
+          width: 56px;
+          height: 56px;
+          padding: 0;
+          justify-content: center;
+          border-radius: 50%;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+        }
+        #gemini-extender-launcher.collapsed:hover {
+          box-shadow: 0 6px 16px rgba(124, 77, 255, 0.5);
+        }
+        #gemini-extender-launcher.collapsed .launcher-icon-container {
+          background: transparent;
+          width: 56px;
+          height: 56px;
+        }
+        #gemini-extender-launcher.collapsed .launcher-text-container {
+          opacity: 0;
+          width: 0;
+          pointer-events: none;
+          transform: scale(0.8);
+          margin: 0;
+          overflow: hidden;
+        }
+        /* Tooltip style */
+        #gemini-extender-launcher.collapsed::after {
+          content: "Open Gemini Workspace";
+          position: absolute;
+          right: 68px;
+          background: #202124;
+          color: white;
+          padding: 6px 12px;
+          border-radius: 6px;
+          font-size: 11px;
+          font-weight: 500;
+          white-space: nowrap;
+          opacity: 0;
+          pointer-events: none;
+          transition: opacity 0.2s ease, transform 0.2s ease;
+          transform: translateX(10px);
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        }
+        #gemini-extender-launcher.collapsed:hover::after {
+          opacity: 1;
+          transform: translateX(0);
+        }
+    `;
+    document.head.appendChild(styleEl);
+
+    // Create main launcher element
+    const launcher = document.createElement('div');
+    launcher.id = 'gemini-extender-launcher';
+    launcher.innerHTML = `
+        <div class="launcher-icon-container">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" style="color: white;">
+                <path d="M12 2c-.5 0-.9.3-1 .8L9.2 8.2 3.8 10c-.5.1-.8.5-.8 1s.3.9.8 1l5.4 1.8 1.8 5.4c.1.5.5.8 1 .8s.9-.3 1-.8l1.8-5.4 5.4-1.8c.5-.1.8-.5.8-1s-.3-.9-.8-1l-5.4-1.8L13 2.8c-.1-.5-.5-.8-1-.8z" />
+                <path d="M19 19c-.3 0-.5.2-.6.5l-.4 1.1-1.1.4c-.3.1-.5.3-.5.6s.2.5.5.6l1.1.4.4 1.1c.1.3.3.5.6.5s.5-.2.6-.5l.4-1.1 1.1-.4c.3-.1.5-.3.5-.6s-.2-.5-.5-.6l-1.1-.4-.4-1.1c-.1-.3-.3-.5-.6-.5z" opacity="0.8"/>
+            </svg>
+        </div>
+        <div class="launcher-text-container">
+            <span class="launcher-title">Gemini Workspace</span>
+            <span class="launcher-subtitle">Interactive prompt extension</span>
+        </div>
+    `;
+
+    document.body.appendChild(launcher);
+
+    // Collapsing trigger after 3.5s
+    const collapseTimeout = setTimeout(() => {
+        launcher.classList.add('collapsed');
+    }, 3500);
+
+    // Click handler to open the side panel
+    launcher.addEventListener('click', () => {
+        // Clear timeout if clicked before auto-collapse
+        clearTimeout(collapseTimeout);
+        launcher.classList.add('collapsed');
+
+        // Send runtime message to service worker
+        chrome.runtime.sendMessage({ action: 'OPEN_SIDEPANEL' }, (response) => {
+            console.log("[Content] Programmatic side panel request response:", response);
+        });
+    });
+}
+
+// Run launcher initialization when DOM is loaded or immediately if already loaded
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeFloatingLauncher);
+} else {
+    initializeFloatingLauncher();
+}

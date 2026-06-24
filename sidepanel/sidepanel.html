@@ -138,16 +138,46 @@
                 <span>Step 3: Export Prompt</span>
             </summary>
             <div class="step-content">
-                <p style="font-size:12px; color:#5f6368; margin-top:0;">Your production-ready prompt has been generated
-                    and compiled with your selections.</p>
-                <textarea id="final-prompt-output" readonly
-                    style="width:100%; height:120px; padding:8px; border:1px solid #dadce0; border-radius:6px; box-sizing:border-box; background:#f8f9fa; font-family:monospace; font-size:11px;"></textarea>
-                <div style="margin-top:12px; display:flex; gap:8px;">
-                    <button id="copy-prompt-btn" class="btn-primary">Copy to Clipboard</button>
-                    <!-- ponytail: database features deferred; write local export placeholder -->
+                <p style="font-size:12px; color:#5f6368; margin-top:0; margin-bottom:16px;">Your production-ready prompt has been generated. You can edit the fields below before exporting or saving.</p>
+                
+                <div style="display:flex; flex-direction:column; gap:14px;">
+                    <!-- Prompt Text -->
+                    <div style="display:flex; flex-direction:column; gap:6px;">
+                        <label for="final-prompt-output" style="font-size:12px; font-weight:600; color:#3c4043;">Optimized Prompt</label>
+                        <textarea id="final-prompt-output"
+                            style="width:100%; height:140px; padding:10px; border:1px solid #dadce0; border-radius:6px; box-sizing:border-box; font-family:monospace; font-size:11px; resize:vertical; background:white; color:#202124;"
+                            placeholder="Prompt content..."></textarea>
+                    </div>
+
+                    <!-- Category -->
+                    <div style="display:flex; flex-direction:column; gap:6px;">
+                        <label for="final-prompt-category" style="font-size:12px; font-weight:600; color:#3c4043;">Category</label>
+                        <input type="text" id="final-prompt-category"
+                            style="width:100%; padding:8px 10px; border:1px solid #dadce0; border-radius:6px; box-sizing:border-box; font-size:12px; background:white; color:#202124;"
+                            placeholder="E.g., coding, writing, summarization">
+                    </div>
+
+                    <!-- Tags -->
+                    <div style="display:flex; flex-direction:column; gap:6px;">
+                        <label for="final-prompt-tags" style="font-size:12px; font-weight:600; color:#3c4043;">Tags (comma-separated)</label>
+                        <input type="text" id="final-prompt-tags"
+                            style="width:100%; padding:8px 10px; border:1px solid #dadce0; border-radius:6px; box-sizing:border-box; font-size:12px; background:white; color:#202124;"
+                            placeholder="E.g., react, tailwind, refactor">
+                    </div>
+
+                    <!-- Summary -->
+                    <div style="display:flex; flex-direction:column; gap:6px;">
+                        <label for="final-prompt-summary" style="font-size:12px; font-weight:600; color:#3c4043;">Summary</label>
+                        <textarea id="final-prompt-summary"
+                            style="width:100%; height:60px; padding:8px 10px; border:1px solid #dadce0; border-radius:6px; box-sizing:border-box; font-size:12px; resize:vertical; background:white; color:#202124;"
+                            placeholder="Brief description of the prompt's purpose..."></textarea>
+                    </div>
+                </div>
+
+                <div style="margin-top:20px; display:flex; gap:8px;">
+                    <button id="copy-prompt-btn" class="btn-primary" style="flex: 1;">Copy to Clipboard</button>
                     <button id="save-db-btn"
-                        style="padding:10px; background:#34a853; color:white; border:none; border-radius:8px; font-weight:500; cursor:pointer;">Save
-                        Prompt</button>
+                        style="padding:10px 16px; background:#34a853; color:white; border:none; border-radius:8px; font-weight:500; cursor:pointer; transition: background 0.2s;">Save Prompt</button>
                 </div>
             </div>
         </details>
