@@ -45,13 +45,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Attach Context Documents
+    // Attach Context Documents — route through SW which reads the extension assets
     attachBtn.addEventListener('click', () => {
         const filesToAttach = [
             "assets/A Prompt Pattern Catalog to Enhance Prompt Engineering with ChatGPT.md",
             "assets/The Prompt Report A Systematic Survey of Prompt Engineering Techniques.md"
         ];
-        postToContentScript('INJECT_FILES', filesToAttach);
+        chrome.runtime.sendMessage({ action: 'INJECT_FILES', payload: filesToAttach });
     });
 
     // Step 1: Submit Initial Base Prompt

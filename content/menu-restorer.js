@@ -11,17 +11,28 @@ function printHierarchy(el) {
     let current = el;
     let path = [];
     let depth = 0;
+
     while (current && current !== document.body && depth < 6) {
         let identifier = current.tagName.toLowerCase();
-        if (current.id) identifier += `#${current.id}`;
-        if (current.className) {
-            const cleanClasses = current.className.split(/\s+/).filter(Boolean).join('.');
-            if (cleanClasses) identifier += `.${cleanClasses}`;
+
+        if (current.id) {
+            identifier += `#${current.id}`;
         }
+
+        // Use getAttribute('class') instead of className to support SVG elements
+        const classAttr = current.getAttribute('class');
+        if (classAttr) {
+            const cleanClasses = classAttr.split(/\s+/).filter(Boolean).join('.');
+            if (cleanClasses) {
+                identifier += `.${cleanClasses}`;
+            }
+        }
+
         path.push(identifier);
         current = current.parentElement;
         depth++;
     }
+
     console.log("[MenuRestorer] Click element hierarchy:", path.join(' < '));
 }
 
@@ -73,9 +84,18 @@ function extractChatIdFromElement(el) {
 // Global listener to capture which chat item was clicked
 document.body.addEventListener('click', (e) => {
     let target = e.target;
+    const targetElement = target.closest('[data-synthetic-click="true"]');
+    if (targetElement) {
+        // Quietly remove the flag and skip logging/restoring logic
+        delete targetElement.dataset.syntheticClick;
+        return;
+    }
+    if (window.__gemini_extender_automating__) {
+        return;
+    }
     console.log("[MenuRestorer] Click detected");
     printHierarchy(target);
-    
+
     const cid = extractChatIdFromElement(target);
     if (cid) {
         lastClickedChatId = cid;
@@ -105,7 +125,7 @@ function getAtToken() {
 async function sendRpc(rpcid, payload, atToken) {
     const url = `https://gemini.google.com/_/BardChatUi/data/batchexecute?rpcids=${rpcid}&source-path=%2F`;
     const reqData = [[[rpcid, JSON.stringify(payload), null, "generic"]]];
-    
+
     const body = new URLSearchParams();
     body.set('f.req', JSON.stringify(reqData));
     body.set('at', atToken);
@@ -149,7 +169,7 @@ function removeChatFromUI(chatId) {
         `a[href*="/app/${chatId}"]`,
         `a[href*="/app/${strippedId}"]`
     ];
-    
+
     selectors.forEach(selector => {
         const links = document.querySelectorAll(selector);
         links.forEach(link => {
@@ -162,7 +182,7 @@ function removeChatFromUI(chatId) {
     });
 
     // If active chat matches the deleted chat, redirect to app home page
-    if (window.location.pathname.includes(chatId) || window.location.pathname.includes(strippedId) || 
+    if (window.location.pathname.includes(chatId) || window.location.pathname.includes(strippedId) ||
         window.location.href.includes(chatId) || window.location.href.includes(strippedId)) {
         window.location.href = 'https://gemini.google.com/app';
     }
@@ -216,7 +236,7 @@ function injectDeleteButton(menuPanel) {
     if (matIcon) {
         matIcon.setAttribute('fonticon', 'delete');
         matIcon.setAttribute('data-mat-icon-name', 'delete');
-        
+
         // Google's dynamic style sheets handle rendering the icon if fonticon="delete" is set.
         // If the original cloned icon had NO text content (pseudo-element CSS rendering),
         // we must keep textContent empty to prevent literal characters from breaking the layout.

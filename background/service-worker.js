@@ -107,7 +107,35 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
   }
   
-  if (request.action === 'SUBMIT_PROMPT' || request.action === 'INJECT_FILES') {
+  if (request.action === 'INJECT_FILES') {
+    (async () => {
+      try {
+        const fileDataArray = [];
+        for (const path of request.payload) {
+          const url = chrome.runtime.getURL(path);
+          const response = await fetch(url);
+          const text = await response.text();
+          const rawName = path.split('/').pop();
+          const decodedName = decodeURIComponent(rawName);
+          fileDataArray.push({ name: decodedName, content: text, type: 'text/markdown' });
+        }
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (!tab) {
+          sendResponse({ success: false, error: 'No active tab found' });
+          return;
+        }
+        chrome.tabs.sendMessage(tab.id, { action: 'INJECT_FILES_DATA', payload: fileDataArray }, (resp) => {
+          sendResponse(resp);
+        });
+      } catch (err) {
+        console.error('[SW] Error reading asset files:', err);
+        sendResponse({ success: false, error: err.toString() });
+      }
+    })();
+    return true;
+  }
+
+  if (request.action === 'SUBMIT_PROMPT') {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       if (tabs[0]) {
         chrome.tabs.sendMessage(tabs[0].id, request, (response) => {
@@ -117,7 +145,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         sendResponse({ success: false, error: 'No active tab found' });
       }
     });
-    return true; // Keep message channel open for async response
+    return true;
   }
   return true; 
 });

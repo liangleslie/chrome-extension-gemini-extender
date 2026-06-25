@@ -3,35 +3,43 @@
 
 console.log("[Content] Loaded in Gemini webpage context");
 
-async function simulateNativeFileUpload(filePaths) {
+// code suggestion from Gemini Chat
+async function injectFilesIntoGemini(fileDataArray) {
+    console.log("[Content] Injecting files via Clipboard...");
+
     const dataTransfer = new DataTransfer();
 
-    for (const path of filePaths) {
-        const url = chrome.runtime.getURL(path);
-        const response = await fetch(url);
-        const blob = await response.blob();
+    // Add text representation (required by some clipboard listeners)
+    const fileNames = fileDataArray.map(f => f.name).join(', ');
+    dataTransfer.setData('text/plain', fileNames);
 
-        const rawFileName = path.split('/').pop();
-        const decodedName = decodeURIComponent(rawFileName);
-
-        const mimeType = blob.type || 'text/markdown';
-        const file = new File([blob], decodedName, { type: mimeType });
-
+    // Add files
+    for (const fd of fileDataArray) {
+        const file = new File([fd.content], fd.name, { type: fd.type || 'text/markdown' });
         dataTransfer.items.add(file);
     }
 
-    const fileInput = document.querySelector('input[type="file"]');
-    if (fileInput) {
-        fileInput.files = dataTransfer.files;
-        fileInput.dispatchEvent(new Event('change', { bubbles: true }));
-        console.log("[Content] Attached files via hidden input element.");
-    } else {
-        const dropTarget = document.querySelector('chat-app') || document.body;
-        dropTarget.dispatchEvent(new DragEvent('dragenter', { bubbles: true, cancelable: true, dataTransfer }));
-        dropTarget.dispatchEvent(new DragEvent('dragover', { bubbles: true, cancelable: true, dataTransfer }));
-        dropTarget.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer }));
-        console.log("[Content] Attached files via drag-and-drop simulation.");
+    const chatInput = document.querySelector('div[contenteditable="true"]');
+    if (!chatInput) {
+        console.error("[Content] Could not find chat input.");
+        return;
     }
+
+    // Ensure focus is established
+    chatInput.focus();
+
+    // Construct the event
+    const pasteEvent = new ClipboardEvent('paste', {
+        bubbles: true,
+        cancelable: true,
+        clipboardData: dataTransfer
+    });
+
+    // Dispatch it
+    chatInput.dispatchEvent(pasteEvent);
+
+    // Silently continue - if the files appear, you've succeeded.
+    console.log("[Content] Paste event dispatched to chat input.");
 }
 
 function setChatInputText(text) {
@@ -203,11 +211,11 @@ Evaluate this context. Continue with either the diagnostic "Information Gatherin
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     console.log("[Content] Inbound Chrome runtime event received:", request.action);
 
-    if (request.action === "INJECT_FILES") {
-        simulateNativeFileUpload(request.payload)
+    if (request.action === "INJECT_FILES_DATA") {
+        injectFilesIntoGemini(request.payload)
             .then(() => sendResponse({ success: true }))
-            .catch(err => {
-                console.error("[Content] Payload injection exception:", err);
+            .catch((err) => {
+                console.error("[Content] File injection pipeline failed:", err);
                 sendResponse({ success: false, error: err.toString() });
             });
         return true;
