@@ -4,187 +4,133 @@
 <head>
     <meta charset="UTF-8">
     <title>Gemini Extended Sidebar</title>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            padding: 16px;
-            background: #f8f9fa;
-            color: #202124;
-            margin: 0;
-        }
-
-        /* Accordion Styles */
-        .step-accordion {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        details {
-            background: white;
-            border: 1px solid #dadce0;
-            border-radius: 8px;
-            overflow: hidden;
-            transition: all 0.2s ease;
-        }
-
-        details[open] {
-            border-color: #1a73e8;
-            box-shadow: 0 1px 3px 0 rgba(60, 64, 67, 0.3);
-        }
-
-        summary {
-            list-style: none;
-            padding: 14px 16px;
-            font-weight: 600;
-            font-size: 14px;
-            cursor: pointer;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: #ffffff;
-            user-select: none;
-        }
-
-        summary::-webkit-details-marker {
-            display: none;
-        }
-
-        /* Prevent manual expanding of locked/unfocused steps */
-        details.locked>summary {
-            cursor: not-allowed;
-            pointer-events: none;
-            opacity: 0.6;
-            background: #f1f3f4;
-        }
-
-        .step-content {
-            padding: 16px;
-            border-top: 1px solid #dadce0;
-        }
-
-        .btn-primary {
-            background-color: #1a73e8;
-            color: white;
-            border: none;
-            padding: 10px 16px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 500;
-            width: 100%;
-            transition: background 0.2s;
-        }
-
-        .btn-primary:hover:not(:disabled) {
-            background-color: #1557b0;
-        }
-
-        .btn-primary:disabled {
-            background-color: #dadce0;
-            color: #80868b;
-            cursor: not-allowed;
-        }
-
-        /* Diagnostic Selection Summary */
-        .resolved-selection {
-            font-size: 12px;
-            color: #5f6368;
-            margin-top: 4px;
-            font-weight: normal;
-        }
-    </style>
+    <link rel="stylesheet" href="sidepanel.css">
 </head>
 
 <body>
-    <div class="step-accordion">
-
-        <!-- STEP 1: Workspace Prompt Input -->
-        <details id="step-1" open>
-            <summary>
-                <span>Step 1: Initialize Workspace</span>
-            </summary>
-            <div class="step-content">
-                <p style="font-size:12px; color:#5f6368; margin-top:0;">Describe what you want to build to begin the
-                    interactive prompt optimization workspace.</p>
-                <textarea id="prompt-input"
-                    style="width:100%; height:80px; padding:8px; border:1px solid #dadce0; border-radius:6px; box-sizing:border-box; font-family:inherit; resize:vertical;"
-                    placeholder="E.g., A Manifest V3 Chrome Extension that scrapes recipe blogs and downloads them as markdown files..."></textarea>
-                <div style="margin-top:12px; display:flex; gap:8px;">
-                    <button id="attach-md-btn"
-                        style="padding:8px; background:#f1f3f4; border:1px solid #dadce0; border-radius:6px; font-size:11px; cursor:pointer;">Attach
-                        Context Docs</button>
-                    <button id="send-initial-btn" class="btn-primary" style="flex:1;">Send Prompt Request</button>
-                </div>
-            </div>
-        </details>
-
-        <!-- STEP 2: Diagnostic Dialog Sequence (Contains 2a, 2b, etc.) -->
-        <details id="step-2" class="locked">
-            <summary>
-                <span>Step 2: Refine Requirements</span>
-                <span id="step-2-count"
-                    style="font-size:11px; background:#e8f0fe; color:#1a73e8; padding:2px 8px; border-radius:10px; display:none;">0
-                    Turns</span>
-            </summary>
-            <div class="step-content" id="step-2-container" style="display:flex; flex-direction:column; gap:16px;">
-                <!-- Chronological turn blocks (2a, 2b...) will append here dynamically -->
-                <div id="diagnostics-timeline" style="display:flex; flex-direction:column; gap:16px;"></div>
-            </div>
-        </details>
-
-        <!-- STEP 3: Optimized System Prompt Output -->
-        <details id="step-3" class="locked">
-            <summary>
-                <span>Step 3: Export Prompt</span>
-            </summary>
-            <div class="step-content">
-                <p style="font-size:12px; color:#5f6368; margin-top:0; margin-bottom:16px;">Your production-ready prompt has been generated. You can edit the fields below before exporting or saving.</p>
-                
-                <div style="display:flex; flex-direction:column; gap:14px;">
-                    <!-- Prompt Text -->
-                    <div style="display:flex; flex-direction:column; gap:6px;">
-                        <label for="final-prompt-output" style="font-size:12px; font-weight:600; color:#3c4043;">Optimized Prompt</label>
-                        <textarea id="final-prompt-output"
-                            style="width:100%; height:140px; padding:10px; border:1px solid #dadce0; border-radius:6px; box-sizing:border-box; font-family:monospace; font-size:11px; resize:vertical; background:white; color:#202124;"
-                            placeholder="Prompt content..."></textarea>
-                    </div>
-
-                    <!-- Category -->
-                    <div style="display:flex; flex-direction:column; gap:6px;">
-                        <label for="final-prompt-category" style="font-size:12px; font-weight:600; color:#3c4043;">Category</label>
-                        <input type="text" id="final-prompt-category"
-                            style="width:100%; padding:8px 10px; border:1px solid #dadce0; border-radius:6px; box-sizing:border-box; font-size:12px; background:white; color:#202124;"
-                            placeholder="E.g., coding, writing, summarization">
-                    </div>
-
-                    <!-- Tags -->
-                    <div style="display:flex; flex-direction:column; gap:6px;">
-                        <label for="final-prompt-tags" style="font-size:12px; font-weight:600; color:#3c4043;">Tags (comma-separated)</label>
-                        <input type="text" id="final-prompt-tags"
-                            style="width:100%; padding:8px 10px; border:1px solid #dadce0; border-radius:6px; box-sizing:border-box; font-size:12px; background:white; color:#202124;"
-                            placeholder="E.g., react, tailwind, refactor">
-                    </div>
-
-                    <!-- Summary -->
-                    <div style="display:flex; flex-direction:column; gap:6px;">
-                        <label for="final-prompt-summary" style="font-size:12px; font-weight:600; color:#3c4043;">Summary</label>
-                        <textarea id="final-prompt-summary"
-                            style="width:100%; height:60px; padding:8px 10px; border:1px solid #dadce0; border-radius:6px; box-sizing:border-box; font-size:12px; resize:vertical; background:white; color:#202124;"
-                            placeholder="Brief description of the prompt's purpose..."></textarea>
-                    </div>
-                </div>
-
-                <div style="margin-top:20px; display:flex; gap:8px;">
-                    <button id="copy-prompt-btn" class="btn-primary" style="flex: 1;">Copy to Clipboard</button>
-                    <button id="save-db-btn"
-                        style="padding:10px 16px; background:#34a853; color:white; border:none; border-radius:8px; font-weight:500; cursor:pointer; transition: background 0.2s;">Save Prompt</button>
-                </div>
-            </div>
-        </details>
-
+    <div class="tab-nav">
+        <button class="tab-btn active" data-target="tab-library">Library</button>
+        <button class="tab-btn" data-target="tab-creator">Creator</button>
+        <button class="tab-btn" data-target="tab-settings">Settings</button>
     </div>
 
+    <div id="tab-library" class="tab-content active">
+        <div class="lib-toolbar">
+            <input type="text" id="lib-search" placeholder="Search prompts...">
+            <select id="lib-category-filter">
+            </select>
+        </div>
+
+        <div id="lib-prompt-list" class="lib-prompt-list"></div>
+
+        <div id="lib-detail-empty" class="lib-detail-empty">
+            <p>Select a prompt to view details.</p>
+        </div>
+
+        <div id="lib-detail-panel" class="lib-detail-panel" style="display: none;">
+            <div class="lib-detail-header">
+                <h2 id="lib-detail-name"></h2>
+                <span id="lib-detail-category" class="lib-badge"></span>
+            </div>
+            <div id="lib-detail-tags" class="lib-tags-container"></div>
+            <p id="lib-detail-summary" class="lib-summary-text"></p>
+
+            <div class="lib-prompt-wrapper">
+                <textarea id="lib-detail-prompt"></textarea>
+            </div>
+
+            <div class="lib-actions">
+                <button id="lib-send-chat-btn" class="btn-primary">Send to Chat</button>
+                <button id="lib-create-gem-btn" class="btn-secondary">Create as Gem →</button>
+                <button id="lib-save-edit-btn" class="btn-success" style="display:none;">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="tab-creator" class="tab-content">
+        <div class="step-accordion">
+            <details id="step-1" open>
+                <summary>
+                    <span>Step 1: Initialize Workspace</span>
+                </summary>
+                <div class="step-content">
+                    <p class="step-description">Describe what you want to build to begin the interactive prompt
+                        optimization workspace.</p>
+                    <textarea id="prompt-input"
+                        placeholder="E.g., A Manifest V3 Chrome Extension that scrapes recipe blogs and downloads them as markdown files..."></textarea>
+                    <div class="step-actions">
+                        <button id="attach-md-btn" class="btn-outline-small">Attach Context Docs</button>
+                        <button id="send-initial-btn" class="btn-primary" style="flex:1;">Send Prompt Request</button>
+                    </div>
+                </div>
+            </details>
+
+            <details id="step-2" class="locked">
+                <summary>
+                    <span>Step 2: Refine Requirements</span>
+                    <span id="step-2-count" class="badge-count">0 Turns</span>
+                </summary>
+                <div class="step-content" id="step-2-container" style="display:flex; flex-direction:column; gap:16px;">
+                    <div id="diagnostics-timeline" style="display:flex; flex-direction:column; gap:16px;"></div>
+                </div>
+            </details>
+
+            <details id="step-3" class="locked">
+                <summary>
+                    <span>Step 3: Export Prompt</span>
+                </summary>
+                <div class="step-content">
+                    <p class="step-description" style="margin-bottom:16px;">Your production-ready prompt has been
+                        generated. You can edit the fields below before exporting or saving.</p>
+
+                    <div class="form-group-container">
+                        <div class="form-group">
+                            <label for="final-prompt-output">Optimized Prompt</label>
+                            <textarea id="final-prompt-output" class="code-textarea"
+                                placeholder="Prompt content..."></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="final-prompt-category">Category</label>
+                            <input type="text" id="final-prompt-category"
+                                placeholder="E.g., coding, writing, summarization">
+                        </div>
+                        <div class="form-group">
+                            <label for="final-prompt-tags">Tags (comma-separated)</label>
+                            <input type="text" id="final-prompt-tags" placeholder="E.g., react, tailwind, refactor">
+                        </div>
+                        <div class="form-group">
+                            <label for="final-prompt-summary">Summary</label>
+                            <textarea id="final-prompt-summary" class="summary-textarea"
+                                placeholder="Brief description of the prompt's purpose..."></textarea>
+                        </div>
+                    </div>
+
+                    <div style="margin-top:20px; display:flex; gap:8px;">
+                        <button id="copy-prompt-btn" class="btn-primary" style="flex: 1;">Copy to Clipboard</button>
+                        <button id="save-db-btn" class="btn-success">Save Prompt</button>
+                    </div>
+                </div>
+            </details>
+        </div>
+    </div>
+
+    <div id="tab-settings" class="tab-content">
+        <div class="settings-placeholder">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#dadce0" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path
+                    d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+                </path>
+            </svg>
+            <h3>Settings</h3>
+            <p>Extension preferences and custom API configurations coming soon.</p>
+        </div>
+    </div>
+
+    <script src="tabs.js"></script>
     <script src="sidepanel.js"></script>
+    <script src="prompt-library.js"></script>
 </body>
 
 </html>

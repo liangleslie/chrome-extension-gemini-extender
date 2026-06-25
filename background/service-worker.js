@@ -24,7 +24,7 @@ function updateTabState(tabId, url) {
       path: 'sidepanel/sidepanel.html',
       enabled: true
     }).catch(err => console.error("Error enabling sidePanel:", err));
-    
+
     // Enable action icon for this tab
     if (chrome.action && chrome.action.enable) {
       chrome.action.enable(tabId).catch(err => console.error("Error enabling action:", err));
@@ -35,7 +35,7 @@ function updateTabState(tabId, url) {
       tabId: tabId,
       enabled: false
     }).catch(err => console.error("Error disabling sidePanel:", err));
-    
+
     // Disable action icon for this tab
     if (chrome.action && chrome.action.disable) {
       chrome.action.disable(tabId).catch(err => console.error("Error disabling action:", err));
@@ -43,10 +43,31 @@ function updateTabState(tabId, url) {
   }
 }
 
-// Monitor tab updates to dynamically enable/disable the side panel & action
-chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+// Monitor tab updates to dynamically enable/disable the side panel & trigger prepopulation
+chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   if (changeInfo.status === 'loading' || changeInfo.url) {
     updateTabState(tabId, tab.url);
+  }
+
+  // Intercept completed loads for Gem creation routing
+  if (changeInfo.status === 'complete' && tab.url && tab.url.includes('/gems/create')) {
+    try {
+      const sessionKey = `gem_prepop_${tabId}`;
+      const data = await chrome.storage.session.get(sessionKey);
+
+      if (data[sessionKey]) {
+        console.log(`[SW] Routing pre-population payload to tab ${tabId}`);
+        chrome.tabs.sendMessage(tabId, {
+          action: 'PREPOPULATE_GEM',
+          payload: data[sessionKey]
+        });
+
+        // Clean up the ephemeral state
+        await chrome.storage.session.remove(sessionKey);
+      }
+    } catch (err) {
+      console.error("[SW] Error retrieving prepopulation payload:", err);
+    }
   }
 });
 
@@ -60,9 +81,9 @@ chrome.tabs.onActivated.addListener((activeInfo) => {
       chrome.sidePanel.setOptions({
         tabId: activeInfo.tabId,
         enabled: false
-      }).catch(err => {});
+      }).catch(err => { });
       if (chrome.action && chrome.action.disable) {
-        chrome.action.disable(activeInfo.tabId).catch(err => {});
+        chrome.action.disable(activeInfo.tabId).catch(err => { });
       }
     }
   });
@@ -75,7 +96,7 @@ chrome.sidePanel
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   console.log("Service worker received message:", request);
-  
+
   if (request.action === 'OPEN_SIDEPANEL') {
     if (sender.tab) {
       // Must be called synchronously to preserve user gesture context
@@ -106,7 +127,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       return true;
     }
   }
-  
+
   if (request.action === 'INJECT_FILES') {
     (async () => {
       try {
@@ -147,5 +168,30 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     });
     return true;
   }
-  return true; 
+
+  if (request.action === 'NAVIGATE_AND_PREPOPULATE_GEM') {
+    (async () => {
+      try {
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (!tab) {
+          sendResponse({ success: false, error: 'No active tab found' });
+          return;
+        }
+
+        await chrome.storage.session.set({
+          [`gem_prepop_${tab.id}`]: request.payload
+        });
+
+        await chrome.tabs.update(tab.id, { url: 'https://gemini.google.com/gems/create' });
+        sendResponse({ success: true });
+
+      } catch (err) {
+        console.error('[SW] Error initiating navigation routing:', err);
+        sendResponse({ success: false, error: err.toString() });
+      }
+    })();
+    return true;
+  }
+
+  return true;
 });

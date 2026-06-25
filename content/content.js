@@ -3,7 +3,6 @@
 
 console.log("[Content] Loaded in Gemini webpage context");
 
-// code suggestion from Gemini Chat
 async function injectFilesIntoGemini(fileDataArray) {
     console.log("[Content] Injecting files via Clipboard...");
 
@@ -144,6 +143,7 @@ c) Populate the "final_prompt" field with the structured prompt.
 
 Output results.json within a markdown codeblock:
 { 
+  "initial_prompt": "<initial input prompt",
   "current_phase": "Information Gathering | Prompt Generation", 
   "questions": [
     { 
@@ -153,6 +153,7 @@ Output results.json within a markdown codeblock:
   ], 
   "final_prompt": 
     {
+        "prompt_name": "<name of prompt>",
         "final_prompt": "<The generated prompt, or null if not confident>", 
         "category": "<category of prompt, e.g. writing, summarization, coding, etc.>", 
         "tags": ["tag1", "tag2", "tag3"], 
@@ -208,6 +209,78 @@ Evaluate this context. Continue with either the diagnostic "Information Gatherin
     }
 }
 
+// --- UPDATED: Gem Form Prepopulation Handler ---
+async function handleGemPrepopulation(payload) {
+    console.log("[Content] Starting Gem Form Prepopulation...", payload);
+
+    const waitForElement = (selector, timeout = 8000) => {
+        return new Promise((resolve) => {
+            if (document.querySelector(selector)) {
+                return resolve(document.querySelector(selector));
+            }
+
+            const observer = new MutationObserver(() => {
+                if (document.querySelector(selector)) {
+                    observer.disconnect();
+                    resolve(document.querySelector(selector));
+                }
+            });
+
+            observer.observe(document.body, { childList: true, subtree: true });
+
+            setTimeout(() => {
+                observer.disconnect();
+                resolve(null);
+            }, timeout);
+        });
+    };
+
+    // Use the confirmed exact selectors
+    const nameSelector = '#gem-name-input';
+    const descSelector = '#gem-description-input';
+    const instrSelector = 'rich-textarea[aria-label="Input for the actual Gem instruction"]';
+
+    // 1. Populate Name
+    const nameInput = await waitForElement(nameSelector);
+    if (nameInput && payload.name) {
+        nameInput.value = payload.name;
+        nameInput.dispatchEvent(new Event('input', { bubbles: true }));
+        nameInput.dispatchEvent(new Event('change', { bubbles: true }));
+    } else {
+        console.warn("[Content] Gem Name input missing or not found in time.");
+    }
+
+    // 2. Populate Description
+    const descInput = document.querySelector(descSelector);
+    if (descInput && payload.description) {
+        descInput.value = payload.description;
+        descInput.dispatchEvent(new Event('input', { bubbles: true }));
+        descInput.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    // 3. Populate Instructions (Custom Element Handling)
+    const instructionsInput = document.querySelector(instrSelector);
+    if (instructionsInput && payload.instructions) {
+        // Try standard value property first
+        if ('value' in instructionsInput) {
+            instructionsInput.value = payload.instructions;
+        } else {
+            // Fallback for custom rich-textareas: find the internal contenteditable div
+            const editor = instructionsInput.querySelector('[contenteditable="true"]') || instructionsInput;
+            editor.innerText = payload.instructions;
+        }
+
+        // Dispatch events from the host element
+        instructionsInput.dispatchEvent(new Event('input', { bubbles: true }));
+        instructionsInput.dispatchEvent(new Event('change', { bubbles: true }));
+
+        // Sometimes Quill needs keyup/keydown to register external text changes
+        instructionsInput.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
+    }
+
+    console.log("[Content] Gem Form Prepopulation phase completed.");
+}
+
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     console.log("[Content] Inbound Chrome runtime event received:", request.action);
 
@@ -227,6 +300,23 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             .then((result) => sendResponse(result))
             .catch(err => {
                 console.error("[Content] Execution pipeline error:", err);
+                sendResponse({ success: false, error: err.toString() });
+            });
+        return true;
+    }
+
+    if (request.action === "SUBMIT_PROMPT_DIRECT") {
+        setChatInputText(request.payload);
+        setTimeout(() => clickSendButton(), 300);
+        sendResponse({ success: true });
+        return true;
+    }
+
+    if (request.action === "PREPOPULATE_GEM") {
+        handleGemPrepopulation(request.payload)
+            .then(() => sendResponse({ success: true }))
+            .catch(err => {
+                console.error("[Content] Gem prepopulation failed:", err);
                 sendResponse({ success: false, error: err.toString() });
             });
         return true;

@@ -6,7 +6,8 @@
   "permissions": [
     "sidePanel",
     "storage",
-    "activeTab"
+    "activeTab",
+    "tabs"
   ],
   "host_permissions": [
     "https://gemini.google.com/*"

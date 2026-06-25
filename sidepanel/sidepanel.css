@@ -1,60 +1,444 @@
 /* sidepanel/sidepanel.css */
-/* Scoped styles mimicking Gemini's design palette */
 
-body {
-    font-family: 'Google Sans', Roboto, Arial, sans-serif;
-    margin: 0;
-    padding: 16px;
-    background-color: #f8f9fa; /* Gemini light theme background */
-    color: #202124;
-}
-
-.container {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-h1 {
-    font-size: 1.2rem;
-    margin: 0;
-}
-
-textarea {
-    width: 100%;
-    min-height: 120px;
-    padding: 12px;
-    border: 1px solid #dadce0;
-    border-radius: 8px;
-    resize: vertical;
-    font-family: inherit;
+/* --- Base Typography & Variables --- */
+*,
+*::before,
+*::after {
     box-sizing: border-box;
 }
 
-textarea:focus {
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Google Sans", Arial, sans-serif;
+    margin: 0;
+    padding: 16px;
+    background-color: #f8f9fa;
+    color: #202124;
+    height: 100vh;
+    overflow: hidden;
+    /* Prevents whole-page width jumping */
+    display: flex;
+    flex-direction: column;
+}
+
+/* --- Tab Navigation --- */
+.tab-nav {
+    display: flex;
+    background: #e8eaed;
+    border-radius: 8px;
+    padding: 4px;
+    margin-bottom: 16px;
+    flex-shrink: 0;
+}
+
+.tab-btn {
+    flex: 1;
+    background: transparent;
+    color: #5f6368;
+    border: none;
+    padding: 8px 0;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.tab-btn:hover:not(.active) {
+    background: rgba(255, 255, 255, 0.5);
+}
+
+.tab-btn.active {
+    background: white;
+    color: #1a73e8;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.tab-content {
+    display: none;
+    flex: 1;
+    overflow-y: auto;
+    /* Moves scrolling internally */
+    padding-right: 4px;
+    /* Space to prevent scrollbar overlay */
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* --- Global Form Elements & Buttons --- */
+textarea,
+input[type="text"],
+select {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid #dadce0;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 12px;
+    background: white;
+    color: #202124;
+    transition: border-color 0.2s;
+}
+
+textarea:focus,
+input[type="text"]:focus,
+select:focus {
     outline: none;
     border-color: #1a73e8;
     box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2);
 }
 
+textarea {
+    resize: vertical;
+}
+
 button {
-    background-color: #1a73e8; /* Google blue */
-    color: white;
+    font-family: inherit;
     border: none;
+    border-radius: 8px;
     padding: 10px 16px;
-    border-radius: 20px;
-    cursor: pointer;
     font-weight: 500;
-    transition: background-color 0.2s;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.2s;
+    text-align: center;
 }
 
-button:hover {
-    background-color: #174ea6;
+.btn-primary {
+    background-color: #1a73e8;
+    color: white;
 }
 
-#dynamic-controls {
-    margin-top: 16px;
+.btn-primary:hover:not(:disabled) {
+    background-color: #1557b0;
+}
+
+.btn-primary:disabled {
+    background-color: #dadce0;
+    color: #80868b;
+    cursor: not-allowed;
+}
+
+.btn-secondary {
+    background: #f1f3f4;
+    color: #1a73e8;
+}
+
+.btn-secondary:hover {
+    background: #e8f0fe;
+}
+
+.btn-success {
+    background: #34a853;
+    color: white;
+}
+
+.btn-success:hover {
+    background: #2d9249;
+}
+
+.btn-outline {
+    background: transparent;
+    border: 1px solid #dadce0;
+    color: #3c4043;
+}
+
+.btn-outline:hover {
+    background: #f8f9fa;
+}
+
+.btn-outline-small {
+    background: #f1f3f4;
+    border: 1px solid #dadce0;
+    border-radius: 6px;
+    font-size: 11px;
+    padding: 8px;
+    color: #3c4043;
+}
+
+.btn-outline-small:hover {
+    background: #e8eaed;
+}
+
+/* --- Prompt Creator (Accordion Styles) --- */
+.step-accordion {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+details {
+    background: white;
+    border: 1px solid #dadce0;
+    border-radius: 8px;
+    overflow: hidden;
+    transition: all 0.2s ease;
+}
+
+details[open] {
+    border-color: #1a73e8;
+    box-shadow: 0 1px 3px 0 rgba(60, 64, 67, 0.3);
+}
+
+summary {
+    list-style: none;
+    padding: 14px 16px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #ffffff;
+    user-select: none;
+}
+
+summary::-webkit-details-marker {
+    display: none;
+}
+
+details.locked>summary {
+    cursor: not-allowed;
+    pointer-events: none;
+    opacity: 0.6;
+    background: #f1f3f4;
+}
+
+.step-content {
+    padding: 16px;
+    border-top: 1px solid #dadce0;
+}
+
+.step-description {
+    font-size: 12px;
+    color: #5f6368;
+    margin-top: 0;
+}
+
+.step-actions {
+    margin-top: 12px;
+    display: flex;
+    gap: 8px;
+}
+
+.badge-count {
+    font-size: 11px;
+    background: #e8f0fe;
+    color: #1a73e8;
+    padding: 2px 8px;
+    border-radius: 10px;
+    display: none;
+}
+
+/* Step 3 Formatting */
+.form-group-container {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.form-group label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #3c4043;
+}
+
+.code-textarea {
+    height: 140px;
+    font-family: monospace;
+    font-size: 11px;
+}
+
+.summary-textarea {
+    height: 60px;
+}
+
+/* --- Prompt Library Styles --- */
+#tab-library.active {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    /* Prevents library container from scrolling, leaves it to the prompt list */
+}
+
+.lib-toolbar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+    flex-shrink: 0;
+}
+
+.lib-prompt-list {
     display: flex;
     flex-direction: column;
     gap: 8px;
+    flex: 1;
+    /* Automatically consumes remaining space */
+    overflow-y: auto;
+    margin-bottom: 16px;
+    padding-right: 4px;
+}
+
+.lib-card {
+    border: 1px solid #dadce0;
+    border-radius: 8px;
+    padding: 12px;
+    cursor: pointer;
+    background: white;
+    transition: border-color 0.2s, background 0.2s;
+    flex-shrink: 0;
+}
+
+.lib-card:hover {
+    border-color: #1a73e8;
+}
+
+.lib-card--active {
+    border-color: #1a73e8;
+    background: #e8f0fe;
+}
+
+.lib-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.lib-card-name {
+    font-weight: 600;
+    font-size: 13px;
+    color: #202124;
+}
+
+.lib-badge {
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 10px;
+    font-weight: 600;
+    background: #e8eaed;
+    color: #5f6368;
+    text-transform: uppercase;
+}
+
+.lib-card-summary {
+    font-size: 11px;
+    color: #5f6368;
+    margin: 0;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.lib-card-tags,
+.lib-tags-container {
+    margin-top: 8px;
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.lib-tag {
+    font-size: 10px;
+    background: #f1f3f4;
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: #5f6368;
+}
+
+/* Library Details Panel */
+.lib-detail-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    border-top: 1px solid #dadce0;
+    padding-top: 16px;
+    flex-shrink: 0;
+    /* Guarantees the panel never collapses */
+}
+
+.lib-detail-empty {
+    text-align: center;
+    color: #5f6368;
+    font-size: 13px;
+    padding: 32px 0;
+    border-top: 1px solid #dadce0;
+    flex-shrink: 0;
+}
+
+.lib-detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.lib-detail-header h2 {
+    font-size: 14px;
+    margin: 0;
+    color: #202124;
+    line-height: 1.3;
+}
+
+.lib-summary-text {
+    font-size: 12px;
+    color: #3c4043;
+    margin: 0;
+    line-height: 1.5;
+}
+
+.lib-prompt-wrapper {
+    display: flex;
+    flex-direction: column;
+}
+
+.lib-prompt-wrapper textarea {
+    height: 120px;
+    font-family: monospace;
+    font-size: 11px;
+    background: #ffffff;
+    transition: all 0.2s ease;
+}
+
+.lib-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.lib-actions button {
+    flex: 1;
+    white-space: nowrap;
+}
+
+/* --- Settings Placeholder --- */
+.settings-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 48px 16px;
+    color: #5f6368;
+}
+
+.settings-placeholder h3 {
+    margin: 16px 0 8px 0;
+    font-size: 16px;
+    color: #202124;
+}
+
+.settings-placeholder p {
+    font-size: 13px;
+    margin: 0;
+    line-height: 1.5;
 }
