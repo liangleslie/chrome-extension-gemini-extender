@@ -151,6 +151,7 @@ document.addEventListener('DOMContentLoaded', () => {
             group.style.cssText = "border: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px;";
             group.innerHTML = `<legend style="font-size: 12px; font-weight: 600; margin-bottom: 4px; color: #3c4043;">${q.question}</legend>`;
 
+            // Render predefined options
             q.options.forEach((opt) => {
                 const label = document.createElement('label');
                 label.style.cssText = "padding: 10px 12px; background: white; border: 1px solid #dadce0; border-radius: 6px; cursor: pointer; display: flex; gap: 8px; font-size: 12px; align-items: center; transition: all 0.15s;";
@@ -166,23 +167,83 @@ document.addEventListener('DOMContentLoaded', () => {
                     label.style.background = '#e8f0fe';
                 }
 
-                // simple interactive option active-state styling
-                const radio = label.querySelector('input');
-                if (!selectedAnswers) {
+                group.appendChild(label);
+            });
+
+            // Add custom response option
+            const isCustomChecked = selectedAnswers && !q.options.includes(selectedAnswers[qIdx]);
+            const customValue = isCustomChecked ? selectedAnswers[qIdx] : '';
+
+            const customLabel = document.createElement('label');
+            customLabel.style.cssText = "padding: 10px 12px; background: white; border: 1px solid #dadce0; border-radius: 6px; cursor: pointer; display: flex; gap: 8px; font-size: 12px; align-items: center; transition: all 0.15s;";
+            
+            customLabel.innerHTML = `
+                <input type="radio" name="turn${currentTurn}_q${qIdx}" value="__custom__" required style="margin: 0;" ${isCustomChecked ? 'checked' : ''} ${selectedAnswers ? 'disabled' : ''}>
+                <span style="white-space: nowrap; line-height: 1.4; color: #5f6368;">Other:</span>
+                <input type="text" class="custom-response-text" placeholder="Type custom answer..." value="${customValue}" style="flex-grow: 1; border: 1px solid #dadce0; border-radius: 4px; padding: 4px 8px; font-size: 12px; outline: none; transition: border-color 0.2s;" ${(!isCustomChecked && !selectedAnswers) ? 'disabled' : ''} ${selectedAnswers ? 'readonly disabled' : ''}>
+            `;
+
+            if (isCustomChecked) {
+                customLabel.style.borderColor = '#1a73e8';
+                customLabel.style.background = '#e8f0fe';
+            }
+
+            const customRadio = customLabel.querySelector('input[type="radio"]');
+            const customText = customLabel.querySelector('input[type="text"]');
+
+            group.appendChild(customLabel);
+
+            // Add change listener to all radios in this fieldset
+            const radios = group.querySelectorAll('input[type="radio"]');
+            if (!selectedAnswers) {
+                radios.forEach(radio => {
                     radio.addEventListener('change', () => {
+                        // Reset all labels in this fieldset
                         group.querySelectorAll('label').forEach(lbl => {
                             lbl.style.borderColor = '#dadce0';
                             lbl.style.background = 'white';
                         });
-                        if (radio.checked) {
-                            label.style.borderColor = '#1a73e8';
-                            label.style.background = '#e8f0fe';
-                        }
-                    });
-                }
 
-                group.appendChild(label);
-            });
+                        // Set active style for selected label
+                        const activeLabel = radio.closest('label');
+                        activeLabel.style.borderColor = '#1a73e8';
+                        activeLabel.style.background = '#e8f0fe';
+
+                        // Enable/disable text input depending on choice
+                        if (radio.value === '__custom__') {
+                            customText.removeAttribute('disabled');
+                            customText.setAttribute('required', '');
+                            customText.focus();
+                        } else {
+                            customText.setAttribute('disabled', '');
+                            customText.removeAttribute('required');
+                            customText.value = '';
+                        }
+                        
+                        // Force form evaluation to update submit button
+                        form.dispatchEvent(new Event('change'));
+                    });
+                });
+
+                // Auto-select Custom radio when text input gets focus or input
+                customText.addEventListener('focus', () => {
+                    customText.style.borderColor = '#1a73e8';
+                    if (!customRadio.checked) {
+                        customRadio.checked = true;
+                        customRadio.dispatchEvent(new Event('change'));
+                    }
+                });
+
+                customText.addEventListener('blur', () => {
+                    customText.style.borderColor = '#dadce0';
+                });
+
+                customText.addEventListener('input', () => {
+                    // Update form change event to refresh submit validation
+                    form.dispatchEvent(new Event('change'));
+                });
+            }
+
             form.appendChild(group);
         });
 
@@ -205,8 +266,14 @@ document.addEventListener('DOMContentLoaded', () => {
             submitBtn.disabled = true;
             submitBtn.textContent = "Submitting Selections...";
 
-            const formData = new FormData(form);
-            const answers = questions.map((q, qIdx) => formData.get(`turn${currentTurn}_q${qIdx}`));
+            const answers = questions.map((q, qIdx) => {
+                const selectedRadio = form.querySelector(`input[name="turn${currentTurn}_q${qIdx}"]:checked`);
+                if (selectedRadio && selectedRadio.value === '__custom__') {
+                    const txtInput = selectedRadio.closest('label').querySelector('input[type="text"]');
+                    return txtInput.value.trim();
+                }
+                return selectedRadio ? selectedRadio.value : '';
+            });
             
             // Save the selected answers to the session
             activeSession.turns[currentTurn - 1].selectedAnswers = answers;

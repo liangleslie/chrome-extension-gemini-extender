@@ -6,5 +6,4 @@ You are a senior frontend engineer and browser-automation architect. Your task i
 
 1. fix attachment of md files
 2. add function to save prompt & link prompt saving to xls database - add prompt tagging
-4. allow free text input for each option in step 2
 5. prompt browser and prompt loading
