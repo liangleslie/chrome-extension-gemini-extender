@@ -71,16 +71,17 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = request.payload;
             if (data.final_prompt) {
                 // Support both object and string schemas for final_prompt
-                const hasPrompt = typeof data.final_prompt === 'object' 
-                    ? !!data.final_prompt.final_prompt 
+                const hasPrompt = typeof data.final_prompt === 'object'
+                    ? !!data.final_prompt.final_prompt
                     : !!data.final_prompt;
                 if (hasPrompt) {
                     // Update session state
+                    activeSession.prompt_name = typeof data.final_prompt === 'object' ? data.final_prompt.prompt_name : promptInput.value;
                     activeSession.finalPromptText = typeof data.final_prompt === 'object' ? data.final_prompt.final_prompt : data.final_prompt;
                     activeSession.category = typeof data.final_prompt === 'object' ? (data.final_prompt.category || '') : '';
                     activeSession.tags = typeof data.final_prompt === 'object' ? (Array.isArray(data.final_prompt.tags) ? data.final_prompt.tags.join(', ') : (data.final_prompt.tags || '')) : '';
                     activeSession.summary = typeof data.final_prompt === 'object' ? (data.final_prompt.summary || '') : '';
-                    
+
                     transitionToFinalStep(data.final_prompt);
                     saveSession();
                 } else if (data.questions?.length) {
@@ -123,9 +124,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const turnHeader = document.createElement('div');
         turnHeader.style.cssText = "font-size: 13px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #dadce0; padding-bottom: 8px;";
-        
+
         const userChoices = selectedAnswers ? selectedAnswers.join(', ') : '';
-        turnHeader.innerHTML = selectedAnswers 
+        turnHeader.innerHTML = selectedAnswers
             ? `
                 <div style="display:flex; flex-direction:column; gap:4px; width:100%;">
                     <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
@@ -155,7 +156,7 @@ document.addEventListener('DOMContentLoaded', () => {
             q.options.forEach((opt) => {
                 const label = document.createElement('label');
                 label.style.cssText = "padding: 10px 12px; background: white; border: 1px solid #dadce0; border-radius: 6px; cursor: pointer; display: flex; gap: 8px; font-size: 12px; align-items: center; transition: all 0.15s;";
-                
+
                 const isChecked = selectedAnswers && selectedAnswers[qIdx] === opt;
                 label.innerHTML = `
                     <input type="radio" name="turn${currentTurn}_q${qIdx}" value="${opt}" required style="margin: 0;" ${isChecked ? 'checked' : ''} ${selectedAnswers ? 'disabled' : ''}>
@@ -176,7 +177,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const customLabel = document.createElement('label');
             customLabel.style.cssText = "padding: 10px 12px; background: white; border: 1px solid #dadce0; border-radius: 6px; cursor: pointer; display: flex; gap: 8px; font-size: 12px; align-items: center; transition: all 0.15s;";
-            
+
             customLabel.innerHTML = `
                 <input type="radio" name="turn${currentTurn}_q${qIdx}" value="__custom__" required style="margin: 0;" ${isCustomChecked ? 'checked' : ''} ${selectedAnswers ? 'disabled' : ''}>
                 <span style="white-space: nowrap; line-height: 1.4; color: #5f6368;">Other:</span>
@@ -219,7 +220,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             customText.removeAttribute('required');
                             customText.value = '';
                         }
-                        
+
                         // Force form evaluation to update submit button
                         form.dispatchEvent(new Event('change'));
                     });
@@ -274,7 +275,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 return selectedRadio ? selectedRadio.value : '';
             });
-            
+
             // Save the selected answers to the session
             activeSession.turns[currentTurn - 1].selectedAnswers = answers;
             saveSession();
@@ -345,18 +346,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (typeof finalPromptData === 'object' && finalPromptData !== null) {
             finalPromptOutput.value = finalPromptData.final_prompt || '';
-            
+
+            const nameInput = document.getElementById('final-prompt-name');
+            if (nameInput) {
+                nameInput.value = finalPromptData.prompt_name || '';
+            }
+
             const categoryInput = document.getElementById('final-prompt-category');
             if (categoryInput) {
                 categoryInput.value = finalPromptData.category || '';
             }
-            
+
             const tagsInput = document.getElementById('final-prompt-tags');
             if (tagsInput) {
                 const tags = finalPromptData.tags;
                 tagsInput.value = Array.isArray(tags) ? tags.join(', ') : (tags || '');
             }
-            
+
             const summaryInput = document.getElementById('final-prompt-summary');
             if (summaryInput) {
                 summaryInput.value = finalPromptData.summary || '';
@@ -375,17 +381,21 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     saveDbBtn.addEventListener('click', () => {
+        const promptName = document.getElementById('final-prompt-name')?.value.trim() || `Generated Prompt - ${new Date().toLocaleTimeString()}`;
         const promptText = finalPromptOutput.value;
         const categoryVal = document.getElementById('final-prompt-category')?.value || '';
         const tagsText = document.getElementById('final-prompt-tags')?.value || '';
         const summaryVal = document.getElementById('final-prompt-summary')?.value || '';
-        
+
         const tagsArr = tagsText.split(',')
             .map(t => t.trim())
             .filter(t => t.length > 0);
 
+        // Standardize keys so both the Creator and Library use matching property names
         const promptRecord = {
-            prompt: promptText,
+            act: promptName,        // Common key for prompt titles/actions
+            prompt: promptText,     // Common key for raw prompt execution
+            text: promptText,       // Common key for text areas
             category: categoryVal,
             tags: tagsArr,
             summary: summaryVal,
@@ -397,7 +407,10 @@ document.addEventListener('DOMContentLoaded', () => {
             list.push(promptRecord);
             chrome.storage.local.set({ savedPrompts: list }, () => {
                 console.log("[Storage] Prompt saved to local storage successfully:", promptRecord);
-                
+
+                // Notify the extension/content pages that the library updated
+                chrome.runtime.sendMessage({ action: 'PROMPT_LIBRARY_UPDATED', payload: promptRecord });
+
                 saveDbBtn.textContent = "Saved to Extension!";
                 saveDbBtn.disabled = true;
                 setTimeout(() => {
@@ -424,7 +437,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function saveSession() {
         if (!currentChatId) return Promise.resolve();
-        
+
         activeSession.promptInputText = promptInput.value;
         activeSession.finalPromptText = finalPromptOutput.value;
         activeSession.category = document.getElementById('final-prompt-category')?.value || '';
@@ -449,7 +462,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function loadSession(chatId) {
         chrome.storage.local.get([`session_${chatId}`], (result) => {
             const session = result[`session_${chatId}`];
-            
+
             // Clear current timeline and reset turnCounter
             timeline.innerHTML = '';
             turnCounter = 0;
@@ -457,7 +470,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (session) {
                 activeSession = session;
                 promptInput.value = session.promptInputText || '';
-                
+
                 finalPromptOutput.value = session.finalPromptText || '';
                 const categoryInput = document.getElementById('final-prompt-category');
                 if (categoryInput) categoryInput.value = session.category || '';
@@ -467,10 +480,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (summaryInput) summaryInput.value = session.summary || '';
 
                 if (session.stepStates.s1Open) s1.setAttribute('open', ''); else s1.removeAttribute('open');
-                
+
                 if (session.stepStates.s2Locked) s2.classList.add('locked'); else s2.classList.remove('locked');
                 if (session.stepStates.s2Open) s2.setAttribute('open', ''); else s2.removeAttribute('open');
-                
+
                 if (session.stepStates.s3Locked) s3.classList.add('locked'); else s3.classList.remove('locked');
                 if (session.stepStates.s3Open) s3.setAttribute('open', ''); else s3.removeAttribute('open');
 
@@ -480,7 +493,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         appendDiagnosticTurn(turn.questions, turn.selectedAnswers);
                     });
                 }
-                
+
                 // Set turn badge count
                 turnCounter = Array.isArray(session.turns) ? session.turns.length : 0;
                 step2Count.textContent = `${turnCounter} Dynamic Turns`;
@@ -501,19 +514,19 @@ document.addEventListener('DOMContentLoaded', () => {
                         s3Open: false
                     }
                 };
-                
+
                 promptInput.value = '';
                 finalPromptOutput.value = '';
                 if (document.getElementById('final-prompt-category')) document.getElementById('final-prompt-category').value = '';
                 if (document.getElementById('final-prompt-tags')) document.getElementById('final-prompt-tags').value = '';
                 if (document.getElementById('final-prompt-summary')) document.getElementById('final-prompt-summary').value = '';
-                
+
                 s1.setAttribute('open', '');
                 s2.classList.add('locked');
                 s2.removeAttribute('open');
                 s3.classList.add('locked');
                 s3.removeAttribute('open');
-                
+
                 step2Count.style.display = 'none';
             }
         });
@@ -522,14 +535,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // Auto-save listeners on user interaction
     promptInput.addEventListener('input', saveSession);
     finalPromptOutput.addEventListener('input', saveSession);
-    
+
     // Setup inputs event delegation/checks to capture edits
     const categoryIn = document.getElementById('final-prompt-category');
     if (categoryIn) categoryIn.addEventListener('input', saveSession);
-    
+
     const tagsIn = document.getElementById('final-prompt-tags');
     if (tagsIn) tagsIn.addEventListener('input', saveSession);
-    
+
     const summaryIn = document.getElementById('final-prompt-summary');
     if (summaryIn) summaryIn.addEventListener('input', saveSession);
 

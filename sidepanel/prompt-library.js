@@ -69,15 +69,36 @@
 
   // ─── Init ─────────────────────────────────────────────────────────────────
   function init() {
-    chrome.storage.local.get({ promptEdits: {} }, ({ promptEdits }) => {
-      prompts = BASE_PROMPTS.map(p => {
+    chrome.storage.local.get({ promptEdits: {}, savedPrompts: [] }, ({ promptEdits, savedPrompts }) => {
+      // 1. Map base prompts and apply any edits
+      const baseWithEdits = BASE_PROMPTS.map(p => {
         const edit = promptEdits[p.prompt_name];
         return edit ? { ...p, ...edit } : { ...p };
       });
+
+      // 2. Convert savedPrompts from sidepanel.js into the standard library structure
+      const customPrompts = savedPrompts.map((sp, idx) => ({
+        prompt_name: sp.act || "Unnamed Custom Prompt",
+        final_prompt: sp.prompt,
+        category: sp.category || 'uncategorized',
+        tags: sp.tags || [],
+        summary: sp.summary || sp.prompt.substring(0, 60) + '...'
+      }));
+
+      // 3. Merge them together
+      prompts = [...baseWithEdits, ...customPrompts];
+
       buildCategoryOptions();
       applyFilter();
     });
   }
+
+  // Listen for external storage updates (e.g. Save Prompt in sidepanel)
+  chrome.storage.onChanged.addListener((changes, namespace) => {
+    if (namespace === 'local' && (changes.savedPrompts || changes.promptEdits)) {
+      init();
+    }
+  });
 
   function buildCategoryOptions() {
     const cats = [...new Set(prompts.map(p => p.category))].sort();
