@@ -97,10 +97,11 @@
                         <div class="form-group">
                             <label for="final-prompt-category">Category</label>
                             <div class="combobox-wrapper">
-                                <input type="text" id="final-prompt-category" list="category-options"
-                                    placeholder="Select or type a category...">
-                                <datalist id="category-options">
-                                </datalist>
+                                <input type="text" id="final-prompt-category" placeholder="Select or type a category..."
+                                    autocomplete="off">
+                                <div class="dropdown-arrow-icon">▼</div>
+
+                                <div id="category-dropdown-menu" class="custom-dropdown-menu"></div>
                             </div>
                         </div>
 

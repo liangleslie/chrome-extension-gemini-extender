@@ -83,26 +83,87 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 2. Populate Dropdown Options dynamically inside transitionToFinalStep()
     function populateCategoryOptions() {
-        const dataList = document.getElementById('category-options');
-        if (!dataList) return;
+        const dropdownMenu = document.getElementById('category-dropdown-menu');
+        const categoryInput = document.getElementById('final-prompt-category');
+        if (!dropdownMenu || !categoryInput) return;
 
-        // Scrape category values from Prompt Library saved schemas
+        const currentText = categoryInput.value.trim().toLowerCase();
+
         chrome.storage.local.get({ savedPrompts: [] }, (result) => {
             const existingPrompts = result.savedPrompts || [];
-            // Add hardcoded defaults just in case
-            const baseCategories = ['coding', 'summarization', 'writing', 'education', 'marketing'];
+            const baseCategories = ['Coding', 'Summarization', 'Writing', 'Education', 'Cooking'];
             const allCategories = new Set(baseCategories);
 
             existingPrompts.forEach(p => {
-                if (p.category) allCategories.add(p.category.trim().toLowerCase());
+                if (p.category) {
+                    // Normalize casing to Title Case
+                    const clean = p.category.trim();
+                    allCategories.add(clean.charAt(0).toUpperCase() + clean.slice(1));
+                }
             });
 
-            dataList.innerHTML = '';
-            allCategories.forEach(cat => {
-                const option = document.createElement('option');
-                option.value = cat.charAt(0).toUpperCase() + cat.slice(1);
-                dataList.appendChild(option);
+            // Convert set to array for advanced substring sorting operations
+            let categoriesArray = Array.from(allCategories);
+
+            // UX Rule: Sort array so elements containing the substring bubble to the very top
+            categoriesArray.sort((a, b) => {
+                const aIdx = a.toLowerCase().indexOf(currentText);
+                const bIdx = b.toLowerCase().indexOf(currentText);
+
+                if (aIdx !== -1 && bIdx === -1) return -1;
+                if (bIdx !== -1 && aIdx === -1) return 1;
+                return a.localeCompare(b); // Default alphabetical sort fallback
             });
+
+            dropdownMenu.innerHTML = '';
+
+            // Render all choices inside our custom DOM tree
+            categoriesArray.forEach(cat => {
+                const item = document.createElement('div');
+                item.className = 'dropdown-item';
+
+                // UX Rule: If a matching substring exists, inject yellow <mark> tags dynamically
+                if (currentText && cat.toLowerCase().includes(currentText)) {
+                    const regex = new RegExp(`(${escapeRegExp(currentText)})`, 'gi');
+                    item.innerHTML = cat.replace(regex, '<mark>$1</mark>');
+                } else {
+                    item.textContent = cat;
+                }
+
+                // Handle selecting an option from the custom panel menu
+                item.addEventListener('click', () => {
+                    categoryInput.value = cat;
+                    dropdownMenu.classList.remove('show');
+                    saveSession();
+                });
+
+                dropdownMenu.appendChild(item);
+            });
+        });
+    }
+
+    function escapeRegExp(string) {
+        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    // Bind layout interaction toggle states inside your DOMContentLoaded block
+    const catInput = document.getElementById('final-prompt-category');
+    const catMenu = document.getElementById('category-dropdown-menu');
+
+    if (catInput && catMenu) {
+        // Show dropdown list layout and refresh sorting whenever focused or clicked
+        ['focus', 'click', 'input'].forEach(evt => {
+            catInput.addEventListener(evt, () => {
+                populateCategoryOptions();
+                catMenu.classList.add('show');
+            });
+        });
+
+        // Close dropdown when clicking anywhere else outside the menu field boundary
+        document.addEventListener('click', (e) => {
+            if (!catInput.contains(e.target) && !catMenu.contains(e.target)) {
+                catMenu.classList.remove('show');
+            }
         });
     }
 
