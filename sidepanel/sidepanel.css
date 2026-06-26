@@ -449,6 +449,41 @@ details.locked>summary {
     width: 100%;
 }
 
+.combobox-wrapper::after {
+    content: "▼";
+    font-size: 10px;
+    color: #5f6368;
+    /* Solid dark gray triangle */
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    /* Allows clicks to pass directly through to the input below */
+    z-index: 2;
+}
+
+#final-prompt-category {
+    width: 100%;
+    padding-right: 32px;
+}
+
+#final-prompt-category::-webkit-calendar-picker-indicator {
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 35px;
+    /* Cover the entire right side arrow area */
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    opacity: 0;
+    /* Fully invisible, eliminating the white-on-white issue */
+    cursor: pointer;
+    z-index: 3;
+    /* Sits over the pseudo-element to remain clickable */
+}
+
 /* --- Step 3: Tag Pill / Badge Container Styles --- */
 .tag-pill-container {
     display: flex;

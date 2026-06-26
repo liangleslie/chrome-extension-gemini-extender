@@ -90,7 +90,7 @@ document.addEventListener('DOMContentLoaded', () => {
         chrome.storage.local.get({ savedPrompts: [] }, (result) => {
             const existingPrompts = result.savedPrompts || [];
             // Add hardcoded defaults just in case
-            const baseCategories = ['coding', 'summarization', 'writing', 'education'];
+            const baseCategories = ['coding', 'summarization', 'writing', 'education', 'marketing'];
             const allCategories = new Set(baseCategories);
 
             existingPrompts.forEach(p => {
@@ -599,6 +599,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const categoryInput = document.getElementById('final-prompt-category');
                 if (categoryInput) categoryInput.value = session.category || '';
+                populateCategoryOptions();
 
                 const tagsInput = document.getElementById('final-prompt-tags');
                 if (tagsInput) tagsInput.value = session.tags || '';
@@ -670,6 +671,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (document.getElementById('final-prompt-category')) document.getElementById('final-prompt-category').value = '';
                 if (document.getElementById('final-prompt-tags')) document.getElementById('final-prompt-tags').value = '';
                 if (document.getElementById('final-prompt-summary')) document.getElementById('final-prompt-summary').value = '';
+                populateCategoryOptions();
 
                 s1.setAttribute('open', '');
                 s2.classList.add('locked');
@@ -691,7 +693,19 @@ document.addEventListener('DOMContentLoaded', () => {
     if (nameIn) nameIn.addEventListener('input', saveSession);
 
     const categoryIn = document.getElementById('final-prompt-category');
-    if (categoryIn) categoryIn.addEventListener('input', saveSession);
+    if (categoryIn) {
+        // Save session on input edits
+        categoryIn.addEventListener('input', saveSession);
+
+        // FORCE the dropdown list to open on a single click or focus
+        categoryIn.addEventListener('click', () => {
+            try {
+                categoryIn.showPicker();
+            } catch (err) {
+                console.error("Native picker not supported or ready:", err);
+            }
+        });
+    };
 
     const summaryIn = document.getElementById('final-prompt-summary');
     if (summaryIn) summaryIn.addEventListener('input', saveSession);
@@ -702,6 +716,8 @@ document.addEventListener('DOMContentLoaded', () => {
     s1.addEventListener('toggle', saveSession);
     s2.addEventListener('toggle', saveSession);
     s3.addEventListener('toggle', saveSession);
+
+    populateCategoryOptions();
 
     // Query active tab URL at startup
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
