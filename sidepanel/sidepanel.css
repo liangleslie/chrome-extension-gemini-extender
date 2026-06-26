@@ -507,7 +507,7 @@ details.locked>summary {
 }
 
 /* --- Step 3: Tag Pill / Badge Container Styles --- */
-.tag-pill-container {
+.final-prompt-tag-pill-container {
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
@@ -520,18 +520,18 @@ details.locked>summary {
     transition: border-color 0.2s, box-shadow 0.2s;
 }
 
-.tag-pill-container:focus-within {
+.final-prompt-tag-pill-container:focus-within {
     border-color: #1a73e8;
     box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2);
 }
 
-.tag-pill-list {
+.final-prompt-tag-pill-list {
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
 }
 
-.tag-badge {
+.final-prompt-tag-badge {
     display: inline-flex;
     align-items: center;
     gap: 6px;
@@ -543,7 +543,7 @@ details.locked>summary {
     font-weight: 500;
 }
 
-.tag-remove-btn {
+.final-prompt-tag-remove-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -559,11 +559,11 @@ details.locked>summary {
     border-radius: 50%;
 }
 
-.tag-remove-btn:hover {
+.final-prompt-tag-remove-btn:hover {
     background: rgba(26, 115, 232, 0.15);
 }
 
-.tag-pill-container input {
+.final-prompt-tag-pill-container input {
     border: none;
     outline: none;
     padding: 2px 0;

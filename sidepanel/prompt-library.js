@@ -174,7 +174,16 @@
     detailName.textContent = p.prompt_name;
     detailCategory.textContent = p.category;
     detailSummary.textContent = p.summary;
-    detailTags.innerHTML = p.tags.map(t => `<span class="lib-tag">${t}</span>`).join('');
+
+    detailTags.innerHTML = '';
+    if (Array.isArray(p.tags)) {
+      p.tags.forEach(tag => {
+        const tagSpan = document.createElement('span');
+        tagSpan.className = 'lib-tag-badge';
+        tagSpan.textContent = tag;
+        detailTags.appendChild(tagSpan);
+      });
+    }
 
     detailPrompt.value = p.final_prompt;
     saveEditBtn.style.display = 'none';

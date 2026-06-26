@@ -6,22 +6,21 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentChatId = null;
     let localTags = [];
 
-    const tagInputField = document.getElementById('tag-input-field');
-    const tagPillsContainer = document.getElementById('tag-pills');
-    const hiddenTagsInput = document.getElementById('final-prompt-tags');
+    const tagInputField = document.getElementById('final-prompt-tag-input-field');
+    const tagPillsContainer = document.getElementById('final-prompt-tag-pills');
 
     function renderTagPills() {
         if (tagPillsContainer) {
             tagPillsContainer.innerHTML = '';
             localTags.forEach((tag, index) => {
                 const pill = document.createElement('span');
-                pill.className = 'tag-badge';
+                pill.className = 'final-prompt-tag-badge';
                 pill.innerHTML = `
                     ${escapeHtml(tag)}
-                    <button type="button" class="tag-remove-btn" data-index="${index}">&times;</button>
+                    <button type="button" class="final-prompt-tag-remove-btn" data-index="${index}">&times;</button>
                 `;
 
-                pill.querySelector('.tag-remove-btn').addEventListener('click', (e) => {
+                pill.querySelector('.final-prompt-tag-remove-btn').addEventListener('click', (e) => {
                     e.stopPropagation();
                     removeTag(index);
                 });
@@ -30,9 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        if (hiddenTagsInput) {
-            hiddenTagsInput.value = localTags.join(', ');
-        }
+        activeSession.tags = [...localTags];
         saveSession();
     }
 
@@ -173,7 +170,7 @@ document.addEventListener('DOMContentLoaded', () => {
         turns: [], // Array of { questions: [...], selectedAnswers: [...] or null }
         finalPromptText: '',
         category: '',
-        tags: '',
+        tags: [],
         summary: '',
         stepStates: {
             s1Open: true,
@@ -242,7 +239,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     activeSession.prompt_name = typeof data.final_prompt === 'object' ? data.final_prompt.prompt_name : promptInput.value;
                     activeSession.finalPromptText = typeof data.final_prompt === 'object' ? data.final_prompt.final_prompt : data.final_prompt;
                     activeSession.category = typeof data.final_prompt === 'object' ? (data.final_prompt.category || '') : '';
-                    activeSession.tags = typeof data.final_prompt === 'object' ? (Array.isArray(data.final_prompt.tags) ? data.final_prompt.tags.join(', ') : (data.final_prompt.tags || '')) : '';
+                    activeSession.tags = typeof data.final_prompt === 'object'
+                        ? (Array.isArray(data.final_prompt.tags) ? data.final_prompt.tags : (typeof data.final_prompt.tags === 'string' ? data.final_prompt.tags.split(',').map(t => t.trim()).filter(Boolean) : []))
+                        : [];
                     activeSession.summary = typeof data.final_prompt === 'object' ? (data.final_prompt.summary || '') : '';
 
                     transitionToFinalStep(data.final_prompt);
@@ -520,12 +519,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 categoryInput.value = finalPromptData.category || '';
             }
 
-            const tagsInput = document.getElementById('final-prompt-tags');
+            const tagsInput = document.getElementById('final-prompt-tag-pills');
             if (tagsInput) {
                 const tags = finalPromptData.tags;
-                tagsInput.value = Array.isArray(tags) ? tags.join(', ') : (tags || '');
-                // Sync localTags array and re-render badges
-                localTags = Array.isArray(tags) ? [...tags] : (tags ? tags.split(',').map(t => t.trim()).filter(Boolean) : []);
+                localTags = Array.isArray(tags) ? [...tags] : [];
                 renderTagPills();
             }
 
@@ -560,7 +557,7 @@ document.addEventListener('DOMContentLoaded', () => {
             act: promptName,
             prompt: promptText,
             category: categoryVal,
-            tags: localTags, // <--- pulled directly from standard badge array
+            tags: [...localTags],
             summary: summaryVal,
             savedAt: new Date().toISOString()
         };
@@ -606,7 +603,7 @@ document.addEventListener('DOMContentLoaded', () => {
         activeSession.promptInputText = promptInput.value;
         activeSession.finalPromptText = finalPromptOutput.value;
         activeSession.category = document.getElementById('final-prompt-category')?.value || '';
-        activeSession.tags = localTags.join(', ');
+        activeSession.tags = [...localTags];
         activeSession.summary = document.getElementById('final-prompt-summary')?.value || '';
         activeSession.stepStates = {
             s1Open: s1.open,
@@ -662,9 +659,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (categoryInput) categoryInput.value = session.category || '';
                 populateCategoryOptions();
 
-                const tagsInput = document.getElementById('final-prompt-tags');
-                if (tagsInput) tagsInput.value = session.tags || '';
-                localTags = session.tags ? session.tags.split(',').map(t => t.trim()).filter(Boolean) : [];
+                localTags = Array.isArray(session.tags) ? [...session.tags] : [];
                 renderTagPills();
 
                 // Reconstruct turn blocks from saved state
