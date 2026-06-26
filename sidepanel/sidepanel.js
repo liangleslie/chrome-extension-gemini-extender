@@ -4,8 +4,110 @@
 document.addEventListener('DOMContentLoaded', () => {
     let turnCounter = 0;
     let currentChatId = null;
+    let localTags = [];
+
+    const tagInputField = document.getElementById('tag-input-field');
+    const tagPillsContainer = document.getElementById('tag-pills');
+    const hiddenTagsInput = document.getElementById('final-prompt-tags');
+
+    function renderTagPills() {
+        if (tagPillsContainer) {
+            tagPillsContainer.innerHTML = '';
+            localTags.forEach((tag, index) => {
+                const pill = document.createElement('span');
+                pill.className = 'tag-badge';
+                pill.innerHTML = `
+                    ${escapeHtml(tag)}
+                    <button type="button" class="tag-remove-btn" data-index="${index}">&times;</button>
+                `;
+
+                pill.querySelector('.tag-remove-btn').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    removeTag(index);
+                });
+
+                tagPillsContainer.appendChild(pill);
+            });
+        }
+
+        if (hiddenTagsInput) {
+            hiddenTagsInput.value = localTags.join(', ');
+        }
+        saveSession();
+    }
+
+    function addTag(tag) {
+        const cleanTag = tag.trim().replace(/^,|,$/g, '');
+        if (cleanTag && !localTags.some(t => t.toLowerCase() === cleanTag.toLowerCase())) {
+            localTags.push(cleanTag);
+            renderTagPills();
+        }
+    }
+
+    function removeTag(index) {
+        localTags.splice(index, 1);
+        renderTagPills();
+    }
+
+    function escapeHtml(string) {
+        return String(string).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    // Setup Tag Input Listeners
+    if (tagInputField) {
+        tagInputField.addEventListener('keydown', (e) => {
+            if (e.key === 'Backspace' && tagInputField.value === '' && localTags.length > 0) {
+                removeTag(localTags.length - 1);
+            }
+        });
+
+        tagInputField.addEventListener('keyup', (e) => {
+            if (e.key === ' ' || e.key === 'Enter' || e.key === ',') {
+                e.preventDefault();
+                const val = tagInputField.value.trim().replace(/,$/, '');
+                if (val && val !== ' ' && val !== ',') {
+                    addTag(val);
+                }
+                tagInputField.value = '';
+            }
+        });
+
+        tagInputField.addEventListener('blur', () => {
+            const val = tagInputField.value.trim();
+            if (val && val !== ',' && val !== ' ') {
+                addTag(val);
+            }
+            tagInputField.value = '';
+        });
+    }
+
+    // 2. Populate Dropdown Options dynamically inside transitionToFinalStep()
+    function populateCategoryOptions() {
+        const dataList = document.getElementById('category-options');
+        if (!dataList) return;
+
+        // Scrape category values from Prompt Library saved schemas
+        chrome.storage.local.get({ savedPrompts: [] }, (result) => {
+            const existingPrompts = result.savedPrompts || [];
+            // Add hardcoded defaults just in case
+            const baseCategories = ['coding', 'summarization', 'writing', 'education'];
+            const allCategories = new Set(baseCategories);
+
+            existingPrompts.forEach(p => {
+                if (p.category) allCategories.add(p.category.trim().toLowerCase());
+            });
+
+            dataList.innerHTML = '';
+            allCategories.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat.charAt(0).toUpperCase() + cat.slice(1);
+                dataList.appendChild(option);
+            });
+        });
+    }
 
     let activeSession = {
+        prompt_name: '',
         promptInputText: '',
         turns: [], // Array of { questions: [...], selectedAnswers: [...] or null }
         finalPromptText: '',
@@ -361,6 +463,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (tagsInput) {
                 const tags = finalPromptData.tags;
                 tagsInput.value = Array.isArray(tags) ? tags.join(', ') : (tags || '');
+                // Sync localTags array and re-render badges
+                localTags = Array.isArray(tags) ? [...tags] : (tags ? tags.split(',').map(t => t.trim()).filter(Boolean) : []);
+                renderTagPills();
             }
 
             const summaryInput = document.getElementById('final-prompt-summary');
@@ -369,6 +474,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } else {
             finalPromptOutput.value = finalPromptData || '';
+        }
+
+        if (typeof populateCategoryOptions === 'function') {
+            populateCategoryOptions();
         }
     }
 
@@ -384,20 +493,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const promptName = document.getElementById('final-prompt-name')?.value.trim() || `Generated Prompt - ${new Date().toLocaleTimeString()}`;
         const promptText = finalPromptOutput.value;
         const categoryVal = document.getElementById('final-prompt-category')?.value || '';
-        const tagsText = document.getElementById('final-prompt-tags')?.value || '';
         const summaryVal = document.getElementById('final-prompt-summary')?.value || '';
 
-        const tagsArr = tagsText.split(',')
-            .map(t => t.trim())
-            .filter(t => t.length > 0);
-
-        // Standardize keys so both the Creator and Library use matching property names
         const promptRecord = {
-            act: promptName,        // Common key for prompt titles/actions
-            prompt: promptText,     // Common key for raw prompt execution
-            text: promptText,       // Common key for text areas
+            act: promptName,
+            prompt: promptText,
             category: categoryVal,
-            tags: tagsArr,
+            tags: localTags, // <--- pulled directly from standard badge array
             summary: summaryVal,
             savedAt: new Date().toISOString()
         };
@@ -408,11 +510,12 @@ document.addEventListener('DOMContentLoaded', () => {
             chrome.storage.local.set({ savedPrompts: list }, () => {
                 console.log("[Storage] Prompt saved to local storage successfully:", promptRecord);
 
-                // Notify the extension/content pages that the library updated
-                chrome.runtime.sendMessage({ action: 'PROMPT_LIBRARY_UPDATED', payload: promptRecord });
-
                 saveDbBtn.textContent = "Saved to Extension!";
                 saveDbBtn.disabled = true;
+
+                // Refresh categories list upon successful save
+                populateCategoryOptions();
+
                 setTimeout(() => {
                     saveDbBtn.textContent = "Save Prompt";
                     saveDbBtn.disabled = false;
@@ -438,10 +541,11 @@ document.addEventListener('DOMContentLoaded', () => {
     function saveSession() {
         if (!currentChatId) return Promise.resolve();
 
+        activeSession.prompt_name = document.getElementById('final-prompt-name')?.value || '';
         activeSession.promptInputText = promptInput.value;
         activeSession.finalPromptText = finalPromptOutput.value;
         activeSession.category = document.getElementById('final-prompt-category')?.value || '';
-        activeSession.tags = document.getElementById('final-prompt-tags')?.value || '';
+        activeSession.tags = localTags.join(', ');
         activeSession.summary = document.getElementById('final-prompt-summary')?.value || '';
         activeSession.stepStates = {
             s1Open: s1.open,
@@ -469,23 +573,37 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (session) {
                 activeSession = session;
+
+                const creatorTabBtn = document.querySelector('.tab-btn[data-target="tab-creator"]');
+                const creatorTabContent = document.getElementById('tab-creator');
+                const libraryTabBtn = document.querySelector('.tab-btn[data-target="tab-library"]');
+                const libraryTabContent = document.getElementById('tab-library');
+
+                if (creatorTabBtn && creatorTabContent && libraryTabBtn && libraryTabContent) {
+                    // Remove active from library, add active to creator
+                    libraryTabBtn.classList.remove('active');
+                    libraryTabContent.classList.remove('active');
+                    creatorTabBtn.classList.add('active');
+                    creatorTabContent.classList.add('active');
+                }
+
                 promptInput.value = session.promptInputText || '';
 
                 finalPromptOutput.value = session.finalPromptText || '';
-                const categoryInput = document.getElementById('final-prompt-category');
-                if (categoryInput) categoryInput.value = session.category || '';
-                const tagsInput = document.getElementById('final-prompt-tags');
-                if (tagsInput) tagsInput.value = session.tags || '';
+
+                const nameInput = document.getElementById('final-prompt-name');
+                if (nameInput) nameInput.value = session.prompt_name || '';
+
                 const summaryInput = document.getElementById('final-prompt-summary');
                 if (summaryInput) summaryInput.value = session.summary || '';
 
-                if (session.stepStates.s1Open) s1.setAttribute('open', ''); else s1.removeAttribute('open');
+                const categoryInput = document.getElementById('final-prompt-category');
+                if (categoryInput) categoryInput.value = session.category || '';
 
-                if (session.stepStates.s2Locked) s2.classList.add('locked'); else s2.classList.remove('locked');
-                if (session.stepStates.s2Open) s2.setAttribute('open', ''); else s2.removeAttribute('open');
-
-                if (session.stepStates.s3Locked) s3.classList.add('locked'); else s3.classList.remove('locked');
-                if (session.stepStates.s3Open) s3.setAttribute('open', ''); else s3.removeAttribute('open');
+                const tagsInput = document.getElementById('final-prompt-tags');
+                if (tagsInput) tagsInput.value = session.tags || '';
+                localTags = session.tags ? session.tags.split(',').map(t => t.trim()).filter(Boolean) : [];
+                renderTagPills();
 
                 // Reconstruct turn blocks from saved state
                 if (Array.isArray(session.turns)) {
@@ -498,6 +616,38 @@ document.addEventListener('DOMContentLoaded', () => {
                 turnCounter = Array.isArray(session.turns) ? session.turns.length : 0;
                 step2Count.textContent = `${turnCounter} Dynamic Turns`;
                 step2Count.style.display = turnCounter > 0 ? 'inline-block' : 'none';
+
+                const hasFinalPrompt = session.finalPromptText && session.finalPromptText.trim() !== '';
+                const hasTurns = turnCounter > 0;
+
+                // Lock/Unlock based on existence of data
+                if (hasTurns) {
+                    s2.classList.remove('locked');
+                } else {
+                    s2.classList.add('locked');
+                }
+
+                if (hasFinalPrompt) {
+                    s3.classList.remove('locked');
+                } else {
+                    s3.classList.add('locked');
+                }
+
+                // Let DOM settle, then open the most advanced/latest step
+                setTimeout(() => {
+                    s1.removeAttribute('open');
+                    s2.removeAttribute('open');
+                    s3.removeAttribute('open');
+
+                    if (hasFinalPrompt) {
+                        s3.setAttribute('open', '');
+                    } else if (hasTurns) {
+                        s2.setAttribute('open', '');
+                    } else {
+                        s1.setAttribute('open', '');
+                    }
+                }, 150);
+
             } else {
                 activeSession = {
                     promptInputText: '',
@@ -537,14 +687,16 @@ document.addEventListener('DOMContentLoaded', () => {
     finalPromptOutput.addEventListener('input', saveSession);
 
     // Setup inputs event delegation/checks to capture edits
+    const nameIn = document.getElementById('final-prompt-name');
+    if (nameIn) nameIn.addEventListener('input', saveSession);
+
     const categoryIn = document.getElementById('final-prompt-category');
     if (categoryIn) categoryIn.addEventListener('input', saveSession);
 
-    const tagsIn = document.getElementById('final-prompt-tags');
-    if (tagsIn) tagsIn.addEventListener('input', saveSession);
-
     const summaryIn = document.getElementById('final-prompt-summary');
     if (summaryIn) summaryIn.addEventListener('input', saveSession);
+
+    // (`tagsIn` listener is removed because pill buttons directly invoke saveSession)
 
     // Capture accordion layout toggles
     s1.addEventListener('toggle', saveSession);

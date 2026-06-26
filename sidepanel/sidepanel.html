@@ -93,15 +93,27 @@
                             <textarea id="final-prompt-output" class="code-textarea"
                                 placeholder="Prompt content..."></textarea>
                         </div>
+
                         <div class="form-group">
                             <label for="final-prompt-category">Category</label>
-                            <input type="text" id="final-prompt-category"
-                                placeholder="E.g., coding, writing, summarization">
+                            <div class="combobox-wrapper">
+                                <input type="text" id="final-prompt-category" list="category-options"
+                                    placeholder="Select or type a category...">
+                                <datalist id="category-options">
+                                </datalist>
+                            </div>
                         </div>
+
                         <div class="form-group">
-                            <label for="final-prompt-tags">Tags (comma-separated)</label>
-                            <input type="text" id="final-prompt-tags" placeholder="E.g., react, tailwind, refactor">
+                            <label for="tag-input-field">Tags</label>
+                            <div class="tag-pill-container" id="tags-pill-wrapper">
+                                <div class="tag-pill-list" id="tag-pills"></div>
+                                <input type="text" id="tag-input-field"
+                                    placeholder="Press enter, space, or comma to add tag...">
+                            </div>
+                            <input type="hidden" id="final-prompt-tags">
                         </div>
+
                         <div class="form-group">
                             <label for="final-prompt-summary">Summary</label>
                             <textarea id="final-prompt-summary" class="summary-textarea"
