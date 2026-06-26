@@ -420,6 +420,35 @@ details.locked>summary {
     white-space: nowrap;
 }
 
+/* Edit Mode Toggle Active State */
+#lib-edit-mode-toggle.active {
+    background-color: #fce8e6;
+    border-color: #d93025;
+}
+
+/* Delete Button Styles (Hidden by default) */
+.lib-card-delete-btn {
+    display: none;
+    background: transparent;
+    border: none;
+    color: #d93025;
+    cursor: pointer;
+    font-size: 18px;
+    padding: 0 4px;
+    border-radius: 4px;
+    line-height: 1;
+    transition: background 0.2s;
+}
+
+.lib-card-delete-btn:hover {
+    background-color: #fce8e6;
+}
+
+/* Show delete buttons when the list is in edit mode */
+.edit-mode-active .lib-card-delete-btn {
+    display: block;
+}
+
 /* --- Settings Placeholder --- */
 .settings-placeholder {
     display: flex;

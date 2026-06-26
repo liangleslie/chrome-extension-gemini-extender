@@ -468,14 +468,18 @@ function initializeFloatingLauncher() {
 
     // Click handler to open the side panel
     launcher.addEventListener('click', () => {
-        // Clear timeout if clicked before auto-collapse
         clearTimeout(collapseTimeout);
         launcher.classList.add('collapsed');
-
-        // Send runtime message to service worker
-        chrome.runtime.sendMessage({ action: 'OPEN_SIDEPANEL' }, (response) => {
-            console.log("[Content] Programmatic side panel request response:", response);
-        });
+        const currentState = launcher.getAttribute('data-state');
+        if (currentState === 'open') {
+            launcher.setAttribute('data-state', 'closed');
+            chrome.runtime.sendMessage({ action: 'CLOSE_SIDEPANEL' }).catch(err => { });
+        } else {
+            launcher.setAttribute('data-state', 'open');
+            chrome.runtime.sendMessage({ action: 'OPEN_SIDEPANEL' }, (response) => {
+                console.log("[Content] Programmatic side panel request response:", response);
+            });
+        }
     });
 }
 

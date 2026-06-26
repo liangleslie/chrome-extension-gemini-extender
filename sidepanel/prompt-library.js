@@ -50,10 +50,12 @@
   let prompts = [];
   let filtered = [];
   let selectedIdx = -1;
+  let isEditMode = false;
 
   // ─── DOM refs ─────────────────────────────────────────────────────────────
   const searchInput = document.getElementById('lib-search');
   const categoryFilter = document.getElementById('lib-category-filter');
+  const editModeBtn = document.getElementById('lib-edit-mode-toggle');
   const promptList = document.getElementById('lib-prompt-list');
   const detailPanel = document.getElementById('lib-detail-panel');
   const detailEmpty = document.getElementById('lib-detail-empty');
@@ -69,20 +71,24 @@
 
   // ─── Init ─────────────────────────────────────────────────────────────────
   function init() {
-    chrome.storage.local.get({ promptEdits: {}, savedPrompts: [] }, ({ promptEdits, savedPrompts }) => {
-      // 1. Map base prompts and apply any edits
-      const baseWithEdits = BASE_PROMPTS.map(p => {
-        const edit = promptEdits[p.prompt_name];
-        return edit ? { ...p, ...edit } : { ...p };
-      });
+    chrome.storage.local.get({ promptEdits: {}, savedPrompts: [], deletedBasePrompts: [] }, ({ promptEdits, savedPrompts, deletedBasePrompts }) => {
 
-      // 2. Convert savedPrompts from sidepanel.js into the standard library structure
+      // 1. Map base prompts, filter out deleted ones, and flag them as base
+      const baseWithEdits = BASE_PROMPTS
+        .filter(p => !deletedBasePrompts.includes(p.prompt_name))
+        .map(p => {
+          const edit = promptEdits[p.prompt_name];
+          return edit ? { ...p, ...edit, isBase: true } : { ...p, isBase: true };
+        });
+
+      // 2. Convert savedPrompts & flag them as custom
       const customPrompts = savedPrompts.map((sp, idx) => ({
         prompt_name: sp.act || "Unnamed Custom Prompt",
         final_prompt: sp.prompt,
         category: sp.category || 'uncategorized',
         tags: sp.tags || [],
-        summary: sp.summary || sp.prompt.substring(0, 60) + '...'
+        summary: sp.summary || sp.prompt.substring(0, 60) + '...',
+        isBase: false
       }));
 
       // 3. Merge them together
@@ -110,6 +116,39 @@
       categoryFilter.appendChild(opt);
     });
   }
+
+  // ─── Edit Mode & Deletion Logic ───────────────────────────────────────────
+  editModeBtn.addEventListener('click', () => {
+    isEditMode = !isEditMode;
+    editModeBtn.classList.toggle('active', isEditMode);
+    promptList.classList.toggle('edit-mode-active', isEditMode);
+  });
+
+  function deletePrompt(p) {
+    if (!confirm(`Are you sure you want to delete "${p.prompt_name}"?`)) return;
+
+    chrome.storage.local.get({ savedPrompts: [], deletedBasePrompts: [] }, (res) => {
+      if (p.isBase) {
+        // Add to blocklist
+        const deleted = res.deletedBasePrompts;
+        if (!deleted.includes(p.prompt_name)) {
+          deleted.push(p.prompt_name);
+          chrome.storage.local.set({ deletedBasePrompts: deleted });
+        }
+      } else {
+        // Remove from saved prompts
+        const saved = res.savedPrompts.filter(sp => (sp.act || "Unnamed Custom Prompt") !== p.prompt_name);
+        chrome.storage.local.set({ savedPrompts: saved });
+      }
+
+      // Clear details panel if the deleted prompt was currently being viewed
+      if (filtered[selectedIdx] && filtered[selectedIdx].prompt_name === p.prompt_name) {
+        selectedIdx = -1;
+        showEmpty();
+      }
+    });
+  }
+
 
   // ─── Filter & render list ─────────────────────────────────────────────────
   function applyFilter() {
@@ -150,14 +189,25 @@
 
       card.innerHTML = `
         <div class="lib-card-header">
-          <span class="lib-card-name">${p.prompt_name}</span>
-          <span class="lib-badge lib-badge--${p.category}">${p.category}</span>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span class="lib-card-name">${p.prompt_name}</span>
+            <span class="lib-badge lib-badge--${p.category}">${p.category}</span>
+          </div>
+          <button class="lib-card-delete-btn" title="Delete Prompt">&times;</button>
         </div>
         <p class="lib-card-summary">${p.summary}</p>
         <div class="lib-card-tags">${tagsHtml}</div>
       `;
 
       card.addEventListener('click', () => selectPrompt(i));
+
+      // Stop card selection when clicking delete, and fire delete logic
+      const delBtn = card.querySelector('.lib-card-delete-btn');
+      delBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        deletePrompt(p);
+      });
+
       promptList.appendChild(card);
     });
   }

@@ -99,14 +99,25 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
   if (request.action === 'OPEN_SIDEPANEL') {
     if (sender.tab) {
-      // Must be called synchronously to preserve user gesture context
       chrome.sidePanel.open({ tabId: sender.tab.id })
         .then(() => sendResponse({ success: true }))
         .catch((error) => {
           console.error("Error programmatically opening sidepanel:", error);
           sendResponse({ success: false, error: error.message });
         });
-      return true; // Keep channel open
+      return true;
+    }
+  }
+
+  if (request.action === 'CLOSE_SIDEPANEL') {
+    if (sender.tab) {
+      chrome.sidePanel.close({ tabId: sender.tab.id })
+        .then(() => sendResponse({ success: true }))
+        .catch((error) => {
+          console.error("Error programmatically closing sidepanel:", error);
+          sendResponse({ success: false, error: error.message });
+        });
+      return true;
     }
   }
 
