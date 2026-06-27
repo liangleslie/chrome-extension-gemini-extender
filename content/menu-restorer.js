@@ -1,7 +1,9 @@
 // content/menu-restorer.js
 // Implements MutationObserver and injects custom navigation
 
-console.log("Menu restorer module loaded");
+let logMenu = (...args) => { if (DEBUG_MODE) console.log("[MenuRestorer]", ...args); };
+let warnMenu = (...args) => { if (DEBUG_MODE) console.warn("[MenuRestorer]", ...args); };
+let errMenu = (...args) => { if (DEBUG_MODE) console.error("[MenuRestorer]", ...args); };
 
 let lastClickedChatId = null;
 let lastClickedTime = 0;
@@ -33,7 +35,7 @@ function printHierarchy(el) {
         depth++;
     }
 
-    console.log("[MenuRestorer] Click element hierarchy:", path.join(' < '));
+    logMenu("Click element hierarchy:", path.join(' < '));
 }
 
 // Resiliently extracts the chat ID from an element or its ancestors/descendants
@@ -54,7 +56,7 @@ function extractChatIdFromElement(el) {
                     if (!cid.startsWith('c_')) {
                         cid = 'c_' + cid;
                     }
-                    console.log("[MenuRestorer] Successfully extracted chat ID:", cid, "from link:", href);
+                    logMenu("Successfully extracted chat ID:", cid, "from link:", href);
                     return cid;
                 }
             }
@@ -70,7 +72,7 @@ function extractChatIdFromElement(el) {
                     if (!cid.startsWith('c_')) {
                         cid = 'c_' + cid;
                     }
-                    console.log("[MenuRestorer] Successfully extracted chat ID from descendant link:", cid, "from:", href);
+                    logMenu("Successfully extracted chat ID from descendant link:", cid, "from:", href);
                     return cid;
                 }
             }
@@ -93,14 +95,14 @@ document.body.addEventListener('click', (e) => {
     if (window.__gemini_extender_automating__) {
         return;
     }
-    console.log("[MenuRestorer] Click detected");
+    logMenu("Click detected");
     printHierarchy(target);
 
     const cid = extractChatIdFromElement(target);
     if (cid) {
         lastClickedChatId = cid;
         lastClickedTime = Date.now();
-        console.log("[MenuRestorer] Active chat ID set to:", lastClickedChatId);
+        logMenu("Active chat ID set to:", lastClickedChatId);
     } else {
         // Clear if we clicked anything else to prevent incorrect matches on other menus
         lastClickedChatId = null;
@@ -152,10 +154,10 @@ async function deleteChatOnServer(chatId) {
         throw new Error("XSRF token (at) not found. Are you logged in?");
     }
 
-    console.log("[MenuRestorer] Sending delete RPC 1 (GzXR5e)...");
+    logMenu("Sending delete RPC 1 (GzXR5e)...");
     await sendRpc('GzXR5e', [chatId], atToken);
 
-    console.log("[MenuRestorer] Sending delete RPC 2 (qWymEb)...");
+    logMenu("Sending delete RPC 2 (qWymEb)...");
     await sendRpc('qWymEb', [chatId, [1, null, 0, 1]], atToken);
 }
 
@@ -176,7 +178,7 @@ function removeChatFromUI(chatId) {
             const row = link.closest('li, [role="listitem"], .chat-row, mat-list-item, .mat-mdc-list-item') || link.parentElement;
             if (row) {
                 row.remove();
-                console.log(`[MenuRestorer] Removed chat row for ${chatId} from DOM`);
+                logMenu(`Removed chat row for ${chatId} from DOM`);
             }
         });
     });
@@ -193,7 +195,7 @@ function injectDeleteButton(menuPanel) {
     // 1. Verify this is a chat options menu by checking if there was a very recent click on a chat item
     const timeSinceClick = Date.now() - lastClickedTime;
     if (!lastClickedChatId || timeSinceClick > 1000) {
-        console.log("[MenuRestorer] Skipping menu injection: No recent active chat click detected (time elapsed:", timeSinceClick, "ms)");
+        logMenu("Skipping menu injection: No recent active chat click detected (time elapsed:", timeSinceClick, "ms)");
         return;
     }
 
@@ -202,7 +204,7 @@ function injectDeleteButton(menuPanel) {
     lastClickedChatId = null;
     lastClickedTime = 0;
 
-    console.log("[MenuRestorer] Injecting Delete button for chatId:", chatId);
+    logMenu("Injecting Delete button for chatId:", chatId);
 
     // Avoid double injection
     if (menuPanel.querySelector('[data-test-id="delete-button"]')) {
@@ -212,7 +214,7 @@ function injectDeleteButton(menuPanel) {
     // Find any existing menu item to use as template
     const refItem = menuPanel.querySelector('[role="menuitem"]');
     if (!refItem) {
-        console.warn("[MenuRestorer] No template menuitem found to clone");
+        warnMenu("No template menuitem found to clone");
         return;
     }
 
@@ -252,7 +254,7 @@ function injectDeleteButton(menuPanel) {
         e.preventDefault();
         e.stopPropagation();
 
-        console.log("[MenuRestorer] Delete clicked. Target chatId:", chatId);
+        logMenu("Delete clicked. Target chatId:", chatId);
 
         const confirmed = confirm("Are you sure you want to delete this chat?");
         if (!confirmed) {
@@ -267,7 +269,7 @@ function injectDeleteButton(menuPanel) {
             // Dismiss the popup menu
             document.body.click();
         } catch (error) {
-            console.error("[MenuRestorer] Error deleting chat:", error);
+            errMenu("Error deleting chat:", error);
             alert("Failed to delete chat: " + error.message);
         }
     });
@@ -275,7 +277,7 @@ function injectDeleteButton(menuPanel) {
     // Append to the list container inside the menu
     const menuContent = menuPanel.querySelector('.mat-mdc-menu-content') || menuPanel;
     menuContent.appendChild(deleteBtn);
-    console.log("[MenuRestorer] Custom Delete menu item injected successfully");
+    logMenu("Custom Delete menu item injected successfully");
 }
 
 // Observe DOM insertions for Angular Material menu panels
@@ -294,7 +296,7 @@ const observeMenu = () => {
     });
 
     observer.observe(document.body, { childList: true, subtree: true });
-    console.log("[MenuRestorer] MutationObserver started on body");
+    logMenu("MutationObserver started on body");
 };
 
 // Initialize observation

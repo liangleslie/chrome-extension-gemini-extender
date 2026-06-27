@@ -1,6 +1,15 @@
 // sidepanel/sidepanel.js
 // Manages sidebar states, accordion timelines, and dynamic multi-turn form rendering
 
+let DEBUG_MODE = false;
+chrome.storage.local.get({ debugMode: false }, (res) => { DEBUG_MODE = res.debugMode; });
+chrome.storage.onChanged.addListener((changes) => {
+    if (changes.debugMode) DEBUG_MODE = changes.debugMode.newValue;
+});
+const log = (...args) => { if (DEBUG_MODE) console.log("[Sidepanel]", ...args); };
+const warn = (...args) => { if (DEBUG_MODE) console.warn("[Sidepanel]", ...args); };
+const err = (...args) => { if (DEBUG_MODE) console.error("[Sidepanel]", ...args); };
+
 document.addEventListener('DOMContentLoaded', () => {
     let turnCounter = 0;
     let currentChatId = null;
@@ -88,8 +97,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         chrome.storage.local.get({ savedPrompts: [] }, (result) => {
             const existingPrompts = result.savedPrompts || [];
-            const baseCategories = ['Coding', 'Summarization', 'Writing', 'Education', 'Cooking'];
-            const allCategories = new Set(baseCategories);
+            const allCategories = new Set();
 
             existingPrompts.forEach(p => {
                 if (p.category) {
@@ -566,7 +574,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const list = result.savedPrompts || [];
             list.push(promptRecord);
             chrome.storage.local.set({ savedPrompts: list }, () => {
-                console.log("[Storage] Prompt saved to local storage successfully:", promptRecord);
+                log("Prompt saved to local storage successfully:", promptRecord);
 
                 saveDbBtn.textContent = "Saved to Extension!";
                 saveDbBtn.disabled = true;
@@ -758,7 +766,7 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 categoryIn.showPicker();
             } catch (err) {
-                console.error("Native picker not supported or ready:", err);
+                err("Native picker not supported or ready:", err);
             }
         });
     };

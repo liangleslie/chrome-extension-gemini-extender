@@ -161,7 +161,7 @@ button {
     background: #e8eaed;
 }
 
-/* --- Prompt Creator (Accordion Styles) --- */
+/* PROMPT CREATOR TAB */
 .step-accordion {
     display: flex;
     flex-direction: column;
@@ -260,7 +260,137 @@ details.locked>summary {
     height: 60px;
 }
 
-/* --- Prompt Library Styles --- */
+/* ComboBox Category Styles */
+.combobox-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+/* Styling our custom dropdown arrow indicator placement */
+.dropdown-arrow-icon {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 10px;
+    color: #5f6368;
+    pointer-events: none;
+    /* Allows clicks to go right through to the input */
+}
+
+/* The custom dropdown overlay menu layout */
+.custom-dropdown-menu {
+    display: none;
+    /* Controlled via JS focus events */
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    /* Guarantees matching input box width */
+    max-height: 200px;
+    overflow-y: auto;
+    background: white;
+    border: 1px solid #dadce0;
+    border-radius: 0 0 6px 6px;
+    box-shadow: 0 4px 6px rgba(32, 33, 36, 0.16);
+    z-index: 1000;
+    margin-top: 2px;
+}
+
+.custom-dropdown-menu.show {
+    display: block;
+}
+
+/* Individual list entries */
+.dropdown-item {
+    padding: 8px 12px;
+    font-size: 13px;
+    color: #202124;
+    cursor: pointer;
+    transition: background 0.1s;
+}
+
+.dropdown-item:hover {
+    background: #f1f3f4;
+}
+
+/* Yellow Substring Highlight Selector Rule */
+.dropdown-item mark {
+    background: #fff200;
+    /* Custom bright yellow */
+    color: #000;
+    padding: 0 2px;
+    border-radius: 2px;
+}
+
+/* Tag Pill / Badge Container Styles */
+.final-prompt-tag-pill-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 6px 10px;
+    background: white;
+    border: 1px solid #dadce0;
+    border-radius: 6px;
+    min-height: 36px;
+    align-items: center;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.final-prompt-tag-pill-container:focus-within {
+    border-color: #1a73e8;
+    box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2);
+}
+
+.final-prompt-tag-pill-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.final-prompt-tag-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #e8f0fe;
+    color: #1a73e8;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.final-prompt-tag-remove-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    padding: 0;
+    color: #1a73e8;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+}
+
+.final-prompt-tag-remove-btn:hover {
+    background: rgba(26, 115, 232, 0.15);
+}
+
+.final-prompt-tag-pill-container input {
+    border: none;
+    outline: none;
+    padding: 2px 0;
+    font-size: 12px;
+    flex-grow: 1;
+    min-width: 120px;
+    background: transparent;
+}
+
+/* PROMPT LIBRARY TAB */
 #tab-library.active {
     display: flex;
     flex-direction: column;
@@ -308,14 +438,26 @@ details.locked>summary {
 .lib-card-header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
+    gap: 8px;
     margin-bottom: 6px;
+}
+
+.lib-card-title-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+    min-width: 0;
 }
 
 .lib-card-name {
     font-weight: 600;
     font-size: 13px;
     color: #202124;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .lib-badge {
@@ -326,6 +468,7 @@ details.locked>summary {
     background: #e8eaed;
     color: #5f6368;
     text-transform: uppercase;
+    flex-shrink: 0;
 }
 
 .lib-card-summary {
@@ -428,6 +571,7 @@ details.locked>summary {
 
 /* Delete Button Styles (Hidden by default) */
 .lib-card-delete-btn {
+    flex-shrink: 0;
     display: none;
     background: transparent;
     border: none;
@@ -449,155 +593,63 @@ details.locked>summary {
     display: block;
 }
 
-/* --- Settings Placeholder --- */
-.settings-placeholder {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    padding: 48px 16px;
-    color: #5f6368;
+.lib-card.is-confirming-delete {
+    border-color: #d93025;
+    background-color: #fdf3f2;
 }
 
-.settings-placeholder h3 {
-    margin: 16px 0 8px 0;
-    font-size: 16px;
-    color: #202124;
-}
-
-.settings-placeholder p {
-    font-size: 13px;
-    margin: 0;
-    line-height: 1.5;
-}
-
-/* --- Step 3: ComboBox Category Styles --- */
-.combobox-wrapper {
-    position: relative;
-    width: 100%;
-}
-
-/* Styling our custom dropdown arrow indicator placement */
-.dropdown-arrow-icon {
-    position: absolute;
-    right: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 10px;
-    color: #5f6368;
-    pointer-events: none;
-    /* Allows clicks to go right through to the input */
-}
-
-/* The custom dropdown overlay menu layout */
-.custom-dropdown-menu {
-    display: none;
-    /* Controlled via JS focus events */
-    position: absolute;
-    top: 100%;
-    left: 0;
-    width: 100%;
-    /* Guarantees matching input box width */
-    max-height: 200px;
-    overflow-y: auto;
-    background: white;
-    border: 1px solid #dadce0;
-    border-radius: 0 0 6px 6px;
-    box-shadow: 0 4px 6px rgba(32, 33, 36, 0.16);
-    z-index: 1000;
-    margin-top: 2px;
-}
-
-.custom-dropdown-menu.show {
-    display: block;
-}
-
-/* Individual list entries */
-.dropdown-item {
-    padding: 8px 12px;
-    font-size: 13px;
-    color: #202124;
-    cursor: pointer;
-    transition: background 0.1s;
-}
-
-.dropdown-item:hover {
-    background: #f1f3f4;
-}
-
-/* Yellow Substring Highlight Selector Rule */
-.dropdown-item mark {
-    background: #fff200;
-    /* Custom bright yellow */
-    color: #000;
-    padding: 0 2px;
-    border-radius: 2px;
-}
-
-/* --- Step 3: Tag Pill / Badge Container Styles --- */
-.final-prompt-tag-pill-container {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    padding: 6px 10px;
-    background: white;
-    border: 1px solid #dadce0;
-    border-radius: 6px;
-    min-height: 36px;
-    align-items: center;
-    transition: border-color 0.2s, box-shadow 0.2s;
-}
-
-.final-prompt-tag-pill-container:focus-within {
-    border-color: #1a73e8;
-    box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2);
-}
-
-.final-prompt-tag-pill-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-}
-
-.final-prompt-tag-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background: #e8f0fe;
-    color: #1a73e8;
+.lib-card.is-confirming-delete .lib-card-delete-btn {
+    background-color: #d93025;
+    color: white;
+    font-size: 11px;
+    font-weight: 600;
     padding: 4px 8px;
     border-radius: 4px;
-    font-size: 11px;
-    font-weight: 500;
 }
 
-.final-prompt-tag-remove-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: transparent;
-    border: none;
-    padding: 0;
-    color: #1a73e8;
-    cursor: pointer;
+/* PROMPT SETTINGS TAB */
+.settings-container {
+    padding: 16px;
+    background: white;
+    border: 1px solid #dadce0;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.settings-container h3 {
+    margin: 0;
     font-size: 14px;
-    line-height: 1;
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
+    color: #202124;
 }
 
-.final-prompt-tag-remove-btn:hover {
-    background: rgba(26, 115, 232, 0.15);
+.setting-item {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
 }
 
-.final-prompt-tag-pill-container input {
-    border: none;
-    outline: none;
-    padding: 2px 0;
-    font-size: 12px;
-    flex-grow: 1;
-    min-width: 120px;
-    background: transparent;
+.toggle-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #202124;
+    cursor: pointer;
+}
+
+.setting-desc {
+    margin: 0;
+    font-size: 11px;
+    color: #5f6368;
+    line-height: 1.4;
+}
+
+.settings-divider {
+    border: 0;
+    height: 1px;
+    background: #dadce0;
+    margin: 8px 0;
 }

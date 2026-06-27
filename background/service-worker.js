@@ -1,7 +1,29 @@
 // background/service-worker.js
 // Central message bus routing data between the UI panels and content scripts
+import { BASE_PROMPTS } from '../utils/base-prompts.js';
 
-console.log("Service Worker initialized.");
+// --- Debug Logging Wrapper for SW ---
+let DEBUG_MODE = false;
+chrome.storage.local.get({ debugMode: false }, (res) => { DEBUG_MODE = res.debugMode; });
+chrome.storage.onChanged.addListener((changes) => {
+  if (changes.debugMode) DEBUG_MODE = changes.debugMode.newValue;
+});
+const log = (...args) => { if (DEBUG_MODE) console.log("[SW]", ...args); };
+const warn = (...args) => { if (DEBUG_MODE) console.warn("[SW]", ...args); };
+const err = (...args) => { if (DEBUG_MODE) console.error("[SW]", ...args); };
+
+log("Service Worker initialized.");
+
+// Initialize Defaults on Install
+chrome.runtime.onInstalled.addListener((details) => {
+  if (details.reason === 'install') {
+    chrome.storage.local.set({
+      savedPrompts: BASE_PROMPTS,
+      basePrompts: BASE_PROMPTS,
+      debugMode: false
+    }, () => console.log("Extension installed: Base prompts seeded.", BASE_PROMPTS));
+  }
+});
 
 // Helper function to check if a URL is Gemini
 function isGeminiUrl(url) {
@@ -11,8 +33,8 @@ function isGeminiUrl(url) {
 // Disable side panel globally by default on install
 chrome.runtime.onInstalled.addListener(() => {
   chrome.sidePanel.setOptions({ enabled: false })
-    .then(() => console.log("Side panel disabled globally by default."))
-    .catch(err => console.error("Error setting global side panel options:", err));
+    .then(() => log("Side panel disabled globally by default."))
+    .catch(err => err("Error setting global side panel options:", err));
 });
 
 // Function to update the extension's enabled/disabled state for a tab
@@ -23,22 +45,22 @@ function updateTabState(tabId, url) {
       tabId: tabId,
       path: 'sidepanel/sidepanel.html',
       enabled: true
-    }).catch(err => console.error("Error enabling sidePanel:", err));
+    }).catch(err => err("Error enabling sidePanel:", err));
 
     // Enable action icon for this tab
     if (chrome.action && chrome.action.enable) {
-      chrome.action.enable(tabId).catch(err => console.error("Error enabling action:", err));
+      chrome.action.enable(tabId).catch(err => err("Error enabling action:", err));
     }
   } else {
     // Disable side panel for this tab
     chrome.sidePanel.setOptions({
       tabId: tabId,
       enabled: false
-    }).catch(err => console.error("Error disabling sidePanel:", err));
+    }).catch(err => err("Error disabling sidePanel:", err));
 
     // Disable action icon for this tab
     if (chrome.action && chrome.action.disable) {
-      chrome.action.disable(tabId).catch(err => console.error("Error disabling action:", err));
+      chrome.action.disable(tabId).catch(err => err("Error disabling action:", err));
     }
   }
 }
@@ -56,7 +78,7 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
       const data = await chrome.storage.session.get(sessionKey);
 
       if (data[sessionKey]) {
-        console.log(`[SW] Routing pre-population payload to tab ${tabId}`);
+        log(`Routing pre-population payload to tab ${tabId}`);
         chrome.tabs.sendMessage(tabId, {
           action: 'PREPOPULATE_GEM',
           payload: data[sessionKey]
@@ -66,7 +88,7 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
         await chrome.storage.session.remove(sessionKey);
       }
     } catch (err) {
-      console.error("[SW] Error retrieving prepopulation payload:", err);
+      err("Error retrieving prepopulation payload:", err);
     }
   }
 });
@@ -92,17 +114,17 @@ chrome.tabs.onActivated.addListener((activeInfo) => {
 // Allows users to open the side panel by clicking on the action toolbar icon
 chrome.sidePanel
   .setPanelBehavior({ openPanelOnActionClick: true })
-  .catch((error) => console.error(error));
+  .catch((error) => err(error));
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  console.log("Service worker received message:", request);
+  log("Service worker received message:", request);
 
   if (request.action === 'OPEN_SIDEPANEL') {
     if (sender.tab) {
       chrome.sidePanel.open({ tabId: sender.tab.id })
         .then(() => sendResponse({ success: true }))
         .catch((error) => {
-          console.error("Error programmatically opening sidepanel:", error);
+          err("Error programmatically opening sidepanel:", error);
           sendResponse({ success: false, error: error.message });
         });
       return true;
@@ -114,7 +136,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       chrome.sidePanel.close({ tabId: sender.tab.id })
         .then(() => sendResponse({ success: true }))
         .catch((error) => {
-          console.error("Error programmatically closing sidepanel:", error);
+          err("Error programmatically closing sidepanel:", error);
           sendResponse({ success: false, error: error.message });
         });
       return true;
@@ -123,7 +145,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
   if (request.action === 'PAGE_RELOADED') {
     if (sender.tab) {
-      console.log("[Service Worker] Tab reloaded. Closing sidepanel for tab:", sender.tab.id);
+      log("[Service Worker] Tab reloaded. Closing sidepanel for tab:", sender.tab.id);
       chrome.sidePanel.setOptions({
         tabId: sender.tab.id,
         enabled: false
@@ -133,7 +155,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           path: 'sidepanel/sidepanel.html',
           enabled: true
         });
-      }).catch(err => console.error("Error toggling sidepanel state on refresh:", err));
+      }).catch(err => err("Error toggling sidepanel state on refresh:", err));
       sendResponse({ success: true });
       return true;
     }
@@ -160,7 +182,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           sendResponse(resp);
         });
       } catch (err) {
-        console.error('[SW] Error reading asset files:', err);
+        err('Error reading asset files:', err);
         sendResponse({ success: false, error: err.toString() });
       }
     })();
@@ -197,7 +219,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         sendResponse({ success: true });
 
       } catch (err) {
-        console.error('[SW] Error initiating navigation routing:', err);
+        err('Error initiating navigation routing:', err);
         sendResponse({ success: false, error: err.toString() });
       }
     })();

@@ -2,55 +2,12 @@
 // Prompt Library tab — load, browse, edit, and send prompts
 
 (function () {
-  // ─── Hardcoded prompt library ─────────────────────────────────────────────
-  const BASE_PROMPTS = [
-    {
-      prompt_name: "Python Fibonacci Generator",
-      final_prompt:
-        "Write a Python function that generates the Fibonacci sequence up to $n$ elements using a generator to optimize memory usage. Include docstrings and a quick example of how to call it.",
-      category: "coding",
-      tags: ["python", "generators", "algorithms"],
-      summary: "Requests a memory-efficient Python generator for the Fibonacci sequence.",
-    },
-    {
-      prompt_name: "Corporate Meeting Summarizer",
-      final_prompt:
-        "Please summarize the following meeting notes into three distinct sections: Key Decisions Made, Outstanding Action Items (with owners), and Topics Deferred to Next Week. Keep the tone professional and concise.",
-      category: "summarization",
-      tags: ["business", "productivity", "notes"],
-      summary: "Transforms raw meeting notes into a structured, professional summary.",
-    },
-    {
-      prompt_name: "Sci-Fi Cyberpunk Opening",
-      final_prompt:
-        "Write the opening paragraph of a cyberpunk noir novel. Introduce a detective character standing in the rain, looking at a neon billboard that is glitching. Focus on sensory details and atmosphere.",
-      category: "writing",
-      tags: ["creative-writing", "sci-fi", "fiction"],
-      summary: "Generates an atmospheric opening paragraph for a cyberpunk story.",
-    },
-    {
-      prompt_name: "Explain Quantum Computing Like I'm 5",
-      final_prompt:
-        "Explain the concept of quantum computing and qubits to a 10-year-old. Use an everyday analogy like flipping a coin or a light switch to make it easy to grasp, and avoid complex jargon.",
-      category: "education",
-      tags: ["quantum-physics", "analogy", "explanation"],
-      summary: "Simplifies quantum computing concepts for a young or non-technical audience.",
-    },
-    {
-      prompt_name: "Marketing Email for Plant App",
-      final_prompt:
-        "Draft a promotional email marketing campaign for a new mobile app called 'SproutRoutine' that helps people keep their houseplants alive. The email should have a catchy subject line, highlight the automated watering reminders feature, and include a strong call-to-action to download the app.",
-      category: "marketing",
-      tags: ["email", "copywriting", "growth"],
-      summary: "Creates a promotional launch email for a houseplant care mobile app.",
-    },
-  ];
-
   // ─── State ────────────────────────────────────────────────────────────────
   let prompts = [];
   let filtered = [];
   let selectedIdx = -1;
   let isEditMode = false;
+  let activeConfirmReset = null;
 
   // ─── DOM refs ─────────────────────────────────────────────────────────────
   const searchInput = document.getElementById('lib-search');
@@ -71,29 +28,16 @@
 
   // ─── Init ─────────────────────────────────────────────────────────────────
   function init() {
-    chrome.storage.local.get({ promptEdits: {}, savedPrompts: [], deletedBasePrompts: [] }, ({ promptEdits, savedPrompts, deletedBasePrompts }) => {
-
-      // 1. Map base prompts, filter out deleted ones, and flag them as base
-      const baseWithEdits = BASE_PROMPTS
-        .filter(p => !deletedBasePrompts.includes(p.prompt_name))
-        .map(p => {
-          const edit = promptEdits[p.prompt_name];
-          return edit ? { ...p, ...edit, isBase: true } : { ...p, isBase: true };
-        });
-
-      // 2. Convert savedPrompts & flag them as custom
-      const customPrompts = savedPrompts.map((sp, idx) => ({
-        prompt_name: sp.act || "Unnamed Custom Prompt",
-        final_prompt: sp.prompt,
+    chrome.storage.local.get({ savedPrompts: [] }, ({ savedPrompts }) => {
+      // Unify the schema (handle both old "act" format and new "prompt_name" format)
+      prompts = savedPrompts.map((sp, idx) => ({
+        prompt_name: sp.prompt_name || sp.act || "Unnamed Prompt",
+        final_prompt: sp.prompt || sp.final_prompt,
         category: sp.category || 'uncategorized',
         tags: sp.tags || [],
-        summary: sp.summary || sp.prompt.substring(0, 60) + '...',
-        isBase: false
+        summary: sp.summary || (sp.prompt ? sp.prompt.substring(0, 60) + '...' : ''),
+        originalIdx: idx // Keep track of its place in the storage array for easy saving
       }));
-
-      // 3. Merge them together
-      prompts = [...baseWithEdits, ...customPrompts];
-
       buildCategoryOptions();
       applyFilter();
     });
@@ -101,9 +45,7 @@
 
   // Listen for external storage updates (e.g. Save Prompt in sidepanel)
   chrome.storage.onChanged.addListener((changes, namespace) => {
-    if (namespace === 'local' && (changes.savedPrompts || changes.promptEdits)) {
-      init();
-    }
+    if (namespace === 'local' && changes.savedPrompts) init();
   });
 
   function buildCategoryOptions() {
@@ -124,25 +66,14 @@
     promptList.classList.toggle('edit-mode-active', isEditMode);
   });
 
-  function deletePrompt(p) {
-    if (!confirm(`Are you sure you want to delete "${p.prompt_name}"?`)) return;
+  function executeDelete(p) {
+    chrome.storage.local.get({ savedPrompts: [] }, (res) => {
+      const saved = res.savedPrompts;
+      // Remove by array index to be perfectly precise
+      saved.splice(p.originalIdx, 1);
+      chrome.storage.local.set({ savedPrompts: saved });
 
-    chrome.storage.local.get({ savedPrompts: [], deletedBasePrompts: [] }, (res) => {
-      if (p.isBase) {
-        // Add to blocklist
-        const deleted = res.deletedBasePrompts;
-        if (!deleted.includes(p.prompt_name)) {
-          deleted.push(p.prompt_name);
-          chrome.storage.local.set({ deletedBasePrompts: deleted });
-        }
-      } else {
-        // Remove from saved prompts
-        const saved = res.savedPrompts.filter(sp => (sp.act || "Unnamed Custom Prompt") !== p.prompt_name);
-        chrome.storage.local.set({ savedPrompts: saved });
-      }
-
-      // Clear details panel if the deleted prompt was currently being viewed
-      if (filtered[selectedIdx] && filtered[selectedIdx].prompt_name === p.prompt_name) {
+      if (filtered[selectedIdx] && filtered[selectedIdx].originalIdx === p.originalIdx) {
         selectedIdx = -1;
         showEmpty();
       }
@@ -173,6 +104,9 @@
   }
 
   function renderList() {
+    // Clean up any orphaned confirm timers if the list re-renders mid-click
+    if (activeConfirmReset) { activeConfirmReset(); }
+
     promptList.innerHTML = '';
 
     if (filtered.length === 0) {
@@ -187,13 +121,14 @@
 
       const tagsHtml = p.tags.map(t => `<span class="lib-tag">${t}</span>`).join('');
 
+      // Notice the new <div class="lib-card-title-group"> wrapper
       card.innerHTML = `
         <div class="lib-card-header">
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <span class="lib-card-name">${p.prompt_name}</span>
+          <div class="lib-card-title-group">
+            <span class="lib-card-name" title="${p.prompt_name}">${p.prompt_name}</span>
             <span class="lib-badge lib-badge--${p.category}">${p.category}</span>
           </div>
-          <button class="lib-card-delete-btn" title="Delete Prompt">&times;</button>
+          <button class="lib-card-delete-btn" type="button" title="Delete Prompt">&times;</button>
         </div>
         <p class="lib-card-summary">${p.summary}</p>
         <div class="lib-card-tags">${tagsHtml}</div>
@@ -201,11 +136,40 @@
 
       card.addEventListener('click', () => selectPrompt(i));
 
-      // Stop card selection when clicking delete, and fire delete logic
+      // ── Modern Inline Delete Handler ──
       const delBtn = card.querySelector('.lib-card-delete-btn');
+
       delBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        deletePrompt(p);
+        e.stopPropagation(); // Prevents opening the prompt details
+
+        if (card.classList.contains('is-confirming-delete')) {
+          // TAP 2: User confirmed!
+          if (activeConfirmReset) activeConfirmReset();
+          executeDelete(p);
+        } else {
+          // TAP 1: Trigger confirmation UI
+          if (activeConfirmReset) activeConfirmReset(); // Reset any other open card
+
+          card.classList.add('is-confirming-delete');
+          delBtn.textContent = 'Confirm';
+
+          const autoTimer = setTimeout(() => resetState(), 3000);
+
+          const outsideClickListener = (evt) => {
+            if (!card.contains(evt.target)) resetState();
+          };
+
+          function resetState() {
+            clearTimeout(autoTimer);
+            card.classList.remove('is-confirming-delete');
+            delBtn.textContent = '×';
+            document.removeEventListener('click', outsideClickListener);
+            activeConfirmReset = null;
+          }
+
+          activeConfirmReset = resetState;
+          setTimeout(() => document.addEventListener('click', outsideClickListener), 10);
+        }
       });
 
       promptList.appendChild(card);
@@ -260,18 +224,19 @@
     if (!newText) return;
 
     p.final_prompt = newText;
-    const masterIdx = prompts.findIndex(mp => mp.prompt_name === p.prompt_name);
-    if (masterIdx !== -1) prompts[masterIdx].final_prompt = newText;
 
-    chrome.storage.local.get({ promptEdits: {} }, ({ promptEdits }) => {
-      promptEdits[p.prompt_name] = { final_prompt: newText };
-      chrome.storage.local.set({ promptEdits }, () => {
-        saveEditBtn.textContent = 'Saved ✓';
-        setTimeout(() => {
-          saveEditBtn.textContent = 'Save Changes';
-          saveEditBtn.style.display = 'none';
-        }, 1500);
-      });
+    chrome.storage.local.get({ savedPrompts: [] }, (res) => {
+      const saved = res.savedPrompts;
+      if (saved[p.originalIdx]) {
+        saved[p.originalIdx].prompt = newText; // Save back to main storage
+        chrome.storage.local.set({ savedPrompts: saved }, () => {
+          saveEditBtn.textContent = 'Saved ✓';
+          setTimeout(() => {
+            saveEditBtn.textContent = 'Save Changes';
+            saveEditBtn.style.display = 'none';
+          }, 1500);
+        });
+      }
     });
   });
 

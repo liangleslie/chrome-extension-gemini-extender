@@ -133,22 +133,33 @@
     </div>
 
     <div id="tab-settings" class="tab-content">
-        <div class="settings-placeholder">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#dadce0" stroke-width="2"
-                stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="3"></circle>
-                <path
-                    d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
-                </path>
-            </svg>
-            <h3>Settings</h3>
-            <p>Extension preferences and custom API configurations coming soon.</p>
+        <div class="settings-container">
+            <h3>General Settings</h3>
+            <div class="setting-item">
+                <label class="toggle-label">
+                    <input type="checkbox" id="debug-mode-toggle">
+                    Enable Debug Logging
+                </label>
+                <p class="setting-desc">Prints background diagnostic info to the browser console. Keep disabled for a
+                    quieter extension.</p>
+            </div>
+
+            <hr class="settings-divider">
+
+            <h3>Danger Zone</h3>
+            <div class="setting-item">
+                <button id="reset-ext-btn" class="btn-outline" style="color: #d93025; border-color: #d93025;">Reset
+                    Everything to Default</button>
+                <p class="setting-desc">Erases all custom prompts, edits, and session history, restoring the original 5
+                    base prompts. This cannot be undone.</p>
+            </div>
         </div>
     </div>
 
     <script src="tabs.js"></script>
     <script src="sidepanel.js"></script>
     <script src="prompt-library.js"></script>
+    <script src="settings.js"></script>
 </body>
 
 </html>
