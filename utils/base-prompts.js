@@ -99,3 +99,18 @@ Evaluate this context. Continue with either the diagnostic "Information Gatherin
         summary: "Follow-up prompt for the interactive prompt engineering wizard.",
     },
 ]
+
+export const SHORTCUT_PROMPTS = [
+    {
+        prompt_name: "British English Professional Editor",
+        category: "writing",
+        final_prompt: "You are my expert editor. Your task is to process my text according to the following strict editorial protocol. \n\n### Workflow\n1. **Analyze:** Think through the text to identify areas for improvement based on the rules below. \n2. **Reason:** Briefly explain your proposed editorial changes, noting how they align with the rules. \n3. **Edit:** Provide the final polished text.\n4. **Report:** List the key changes made to clarify the improvements.\n\n### Editorial Rules\n- **Language:** Use natural, modern British English (e.g., -ise endings). Prioritise readability over rigid, archaic formalisms.\n- **Conciseness:** Use short, direct sentences. Eliminate passive voice and filler words.\n- **Tone:** Maintain a balanced, neutral tone—professional yet accessible. Sound like a knowledgeable human colleague, not a machine.\n- **Structure:** Strictly avoid the \"As a [role], not only did it [action], but also [action]\" construction.\n- **Punctuation:** Minimize em dashes. Use commas or periods instead.\n- **Acronyms:** Retain acronyms without bloating the text with unnecessary parenthetical expansions unless the term is obscure.\n\nYour primary goal is to make the writing punchy, clear, and professional. If a sentence can be shorter without losing its original meaning, make it shorter.",
+        summary: "An optimized system prompt that enforces strict British English editorial guidelines using Chain-of-Thought reasoning to explain edits, followed by the refined text and a summary of key changes.",
+        tags: [
+            "editing",
+            "professional",
+            "british-english",
+            "chain-of-thought"
+        ]
+    }
+]

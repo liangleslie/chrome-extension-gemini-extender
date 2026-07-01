@@ -562,8 +562,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const summaryVal = document.getElementById('final-prompt-summary')?.value || '';
 
         const promptRecord = {
-            act: promptName,
-            prompt: promptText,
+            prompt_name: promptName,
+            final_prompt: promptText,
             category: categoryVal,
             tags: [...localTags],
             summary: summaryVal,

@@ -24,28 +24,39 @@
 
     // Load prompt templates from storage
     let promptTemplates = {};
+    let shortcutPromptText = '';
+
     async function loadPromptTemplates() {
         return new Promise((resolve) => {
-            chrome.storage.local.get({ savedPrompts: [], creatorPrompts: [] }, (result) => {
+            chrome.storage.local.get({ savedPrompts: [], creatorPrompts: [], shortcutPrompts: [] }, (result) => {
                 const prompts = result.savedPrompts || [];
                 const creatorPrompts = result.creatorPrompts || [];
+                const shortcutPrompts = result.shortcutPrompts || [];
+
                 // Build a map by prompt_name for easy lookup
                 const map = {};
                 const creatorMap = {}
                 prompts.forEach(p => {
-                    const name = p.prompt_name || p.act;
+                    const name = p.prompt_name;
                     if (name && p.final_prompt) {
                         map[name] = p.final_prompt;
                     }
                 });
                 creatorPrompts.forEach(p => {
-                    const name = p.prompt_name || p.act;
+                    const name = p.prompt_name;
                     if (name && p.final_prompt) {
                         creatorMap[name] = p.final_prompt;
                     }
                 });
+
+                // Get the first shortcut prompt's final_prompt
+                if (shortcutPrompts.length > 0 && shortcutPrompts[0].final_prompt) {
+                    shortcutPromptText = shortcutPrompts[0].final_prompt;
+                }
+
                 promptTemplates = { "prompts": map, "creator_prompts": creatorMap };
                 log("Loaded prompt templates from storage:", Object.keys(promptTemplates));
+                log("Loaded shortcut prompt:", shortcutPromptText ? "yes" : "no");
                 resolve(promptTemplates);
             });
         });
@@ -56,7 +67,7 @@
 
     // Listen for storage changes to reload templates
     chrome.storage.onChanged.addListener((changes, namespace) => {
-        if (namespace === 'local' && changes.savedPrompts) {
+        if (namespace === 'local' && (changes.savedPrompts || changes.shortcutPrompts)) {
             loadPromptTemplates();
         }
     });
@@ -357,124 +368,29 @@
     // Floating Peek & FAB Side Panel Launcher Injection
     function initializeFloatingLauncher() {
         // Avoid double injection
-        if (document.getElementById('gemini-extender-launcher')) return;
+        if (document.getElementById('gemini-extender-launcher') || document.getElementById('gemini-extender-shortcut-fab')) return;
 
         // Notify service worker of page reload to close stale sidepanel window
         chrome.runtime.sendMessage({ action: 'PAGE_RELOADED' }).catch(error => log("PAGE_RELOADED error:", error));
 
-        // Create style element
-        const styleEl = document.createElement('style');
-        styleEl.textContent = `
-            #gemini-extender-launcher {
-            position: fixed;
-            bottom: 24px;
-            right: 24px;
-            z-index: 9999999;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            background: linear-gradient(135deg, #1a73e8, #7c4dff);
-            color: white;
-            border-radius: 28px;
-            box-shadow: 0 6px 20px rgba(26, 115, 232, 0.35);
-            cursor: pointer;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            box-sizing: border-box;
-            padding: 8px 16px 8px 10px;
-            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            width: 250px;
-            height: 56px;
-            overflow: hidden;
-            user-select: none;
-            }
-            #gemini-extender-launcher:hover {
-            box-shadow: 0 8px 24px rgba(124, 77, 255, 0.5);
-            transform: translateY(-2px);
-            }
-            #gemini-extender-launcher .launcher-icon-container {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 38px;
-            height: 38px;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.2);
-            flex-shrink: 0;
-            transition: transform 0.3s ease;
-            }
-            #gemini-extender-launcher:hover .launcher-icon-container {
-            transform: rotate(20deg) scale(1.1);
-            }
-            #gemini-extender-launcher .launcher-text-container {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            transition: opacity 0.3s ease, transform 0.3s ease;
-            opacity: 1;
-            transform: scale(1);
-            white-space: nowrap;
-            }
-            #gemini-extender-launcher .launcher-title {
-            font-size: 13px;
-            font-weight: 600;
-            letter-spacing: 0.2px;
-            }
-            #gemini-extender-launcher .launcher-subtitle {
-            font-size: 10px;
-            opacity: 0.8;
-            margin-top: 1px;
-            }
-            /* Collapsed (FAB) State */
-            #gemini-extender-launcher.collapsed {
-            width: 56px;
-            height: 56px;
-            padding: 0;
-            justify-content: center;
-            border-radius: 50%;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
-            }
-            #gemini-extender-launcher.collapsed:hover {
-            box-shadow: 0 6px 16px rgba(124, 77, 255, 0.5);
-            }
-            #gemini-extender-launcher.collapsed .launcher-icon-container {
-            background: transparent;
-            width: 56px;
-            height: 56px;
-            }
-            #gemini-extender-launcher.collapsed .launcher-text-container {
-            opacity: 0;
-            width: 0;
-            pointer-events: none;
-            transform: scale(0.8);
-            margin: 0;
-            overflow: hidden;
-            }
-            /* Tooltip style */
-            #gemini-extender-launcher.collapsed::after {
-            content: "Open Gemini Workspace";
-            position: absolute;
-            right: 68px;
-            background: #202124;
-            color: white;
-            padding: 6px 12px;
-            border-radius: 6px;
-            font-size: 11px;
-            font-weight: 500;
-            white-space: nowrap;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.2s ease, transform 0.2s ease;
-            transform: translateX(10px);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-            }
-            #gemini-extender-launcher.collapsed:hover::after {
-            opacity: 1;
-            transform: translateX(0);
-            }
+        // Create shortcut FAB element (left side)
+        const shortcutFab = document.createElement('div');
+        shortcutFab.id = 'gemini-extender-shortcut-fab';
+        shortcutFab.innerHTML = `
+            <div class="launcher-icon-container">
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" style="color: white;">
+                    <path d="M12 20h9M16.5 3.5a2.17 2.17 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+                </svg>
+            </div>
+            <div class="launcher-text-container">
+                <span class="launcher-title">Editor Prompt</span>
+                <span class="launcher-subtitle">Inject shortcut</span>
+            </div>
         `;
-        document.head.appendChild(styleEl);
 
-        // Create main launcher element
+        document.body.appendChild(shortcutFab);
+
+        // Create main launcher element (right side)
         const launcher = document.createElement('div');
         launcher.id = 'gemini-extender-launcher';
         launcher.innerHTML = `
@@ -494,21 +410,122 @@
 
         // Collapsing trigger after 3.5s
         const collapseTimeout = setTimeout(() => {
+            shortcutFab.classList.add('collapsed');
             launcher.classList.add('collapsed');
         }, 3500);
+
+        // Click handler for shortcut FAB - inject prompt without sending
+        shortcutFab.addEventListener('click', async () => {
+            log("Shortcut FAB clicked - injecting editor prompt");
+            // Ensure shortcut prompt is loaded
+            if (!shortcutPromptText) {
+                await loadPromptTemplates();
+            }
+            if (shortcutPromptText) {
+                setChatInputText(shortcutPromptText);
+            } else {
+                err("No shortcut prompt available in storage");
+            }
+        });
 
         // Click handler to open the side panel
         launcher.addEventListener('click', () => {
             clearTimeout(collapseTimeout);
+            shortcutFab.classList.add('collapsed');
             launcher.classList.add('collapsed');
+
+            // 1. LIFECYCLE GUARD: Check if the extension was reloaded/invalidated in the background
+            if (!chrome.runtime || !chrome.runtime.sendMessage) {
+                warn("Extension context invalidated. The script is orphaned.");
+                alert("The extension was updated or reloaded in the background.\n\nPlease refresh this page to reconnect the Gemini Workspace launcher.");
+                return;
+            }
+
+            // 2. BROAD PWA DETECTION: Catch all flavors of standalone/app windows
+            const isStandaloneWebApp =
+                window.matchMedia('(display-mode: standalone)').matches ||
+                window.matchMedia('(display-mode: minimal-ui)').matches ||
+                window.matchMedia('(display-mode: window-controls-overlay)').matches ||
+                window.navigator.standalone === true;
+
+            // --- PWA ALTERNATIVE PATH ---
+            if (isStandaloneWebApp) {
+                log("PWA mode detected. Toggling custom injected iframe sidebar.");
+
+                let shadowHost = document.getElementById('gemini-workspace-shadow-host');
+
+                if (shadowHost) {
+                    // If it already exists, toggle its visibility
+                    const wrapper = shadowHost.shadowRoot.getElementById('workspace-sidebar-wrapper');
+                    if (wrapper.classList.contains('open')) {
+                        wrapper.classList.remove('open');
+                        launcher.setAttribute('data-state', 'closed');
+                    } else {
+                        wrapper.classList.add('open');
+                        launcher.setAttribute('data-state', 'open');
+                    }
+                } else {
+                    // Create a Shadow Host to isolate extension CSS from Gemini's CSS
+                    shadowHost = document.createElement('div');
+                    shadowHost.id = 'gemini-workspace-shadow-host';
+                    document.body.appendChild(shadowHost);
+
+                    const shadowRoot = shadowHost.attachShadow({ mode: 'open' });
+
+                    // Inject styles for the iframe container
+                    const style = document.createElement('style');
+                    style.textContent = `
+                        #workspace-sidebar-wrapper {
+                            position: fixed;
+                            top: 0;
+                            right: -350px; /* Hidden off-screen initially */
+                            width: 350px;
+                            height: 100vh;
+                            z-index: 99999999;
+                            background: white;
+                            box-shadow: -5px 0 25px rgba(0,0,0,0.15);
+                            transition: right 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+                        }
+                        #workspace-sidebar-wrapper.open {
+                            right: 0; /* Slide in */
+                        }
+                        iframe {
+                            width: 100%;
+                            height: 100%;
+                            border: none;
+                        }
+                    `;
+                    shadowRoot.appendChild(style);
+
+                    // Build wrapper and iframe
+                    const wrapper = document.createElement('div');
+                    wrapper.id = 'workspace-sidebar-wrapper';
+                    wrapper.classList.add('open'); // Open immediately on creation
+
+                    const iframe = document.createElement('iframe');
+                    // Load your exact extension sidepanel file into the webpage
+                    iframe.src = chrome.runtime.getURL('sidepanel/sidepanel.html');
+
+                    wrapper.appendChild(iframe);
+                    shadowRoot.appendChild(wrapper);
+
+                    launcher.setAttribute('data-state', 'open');
+                }
+                return; // Exit early to bypass the standard native sidepanel logic
+            }
+
+            // --- STANDARD BROWSER TAB PATH ---
             const currentState = launcher.getAttribute('data-state');
             if (currentState === 'open') {
                 launcher.setAttribute('data-state', 'closed');
-                chrome.runtime.sendMessage({ action: 'CLOSE_SIDEPANEL' }).catch(error => { });
+                chrome.runtime.sendMessage({ action: 'CLOSE_SIDEPANEL' }).catch(() => { });
             } else {
-                launcher.setAttribute('data-state', 'open');
                 chrome.runtime.sendMessage({ action: 'OPEN_SIDEPANEL' }, (response) => {
-                    log("Programmatic side panel request response:", response);
+                    if (response && response.success) {
+                        launcher.setAttribute('data-state', 'open');
+                    } else {
+                        launcher.setAttribute('data-state', 'closed');
+                    }
                 });
             }
         });

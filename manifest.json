@@ -27,6 +27,9 @@
         "utils/json-parser.js",
         "content/menu-restorer.js",
         "content/content.js"
+      ],
+      "css": [
+        "content/content.css"
       ]
     }
   ],

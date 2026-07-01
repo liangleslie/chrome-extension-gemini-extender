@@ -1,6 +1,6 @@
 // background/service-worker.js
 // Central message bus routing data between the UI panels and content scripts
-import { BASE_PROMPTS, CREATOR_PROMPTS } from '../utils/base-prompts.js';
+import { BASE_PROMPTS, CREATOR_PROMPTS, SHORTCUT_PROMPTS } from '../utils/base-prompts.js';
 
 // --- Debug Logging Wrapper for SW ---
 let DEBUG_MODE = false;
@@ -21,6 +21,7 @@ chrome.runtime.onInstalled.addListener((details) => {
       savedPrompts: BASE_PROMPTS,
       basePrompts: BASE_PROMPTS,
       creatorPrompts: CREATOR_PROMPTS,
+      shortcutPrompts: SHORTCUT_PROMPTS,
       debugMode: false
     }, () => console.log("Extension installed: Base prompts seeded.", BASE_PROMPTS));
   }

@@ -1,0 +1,238 @@
+/* FAB Styles */
+#gemini-extender-shortcut-fab {
+    position: fixed;
+    bottom: 92px;
+    right: 24px;
+    z-index: 9999999;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: linear-gradient(135deg, #34a853, #0d9d4a);
+    color: white;
+    border-radius: 28px;
+    box-shadow: 0 6px 20px rgba(52, 168, 83, 0.35);
+    cursor: pointer;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    box-sizing: border-box;
+    padding: 8px 16px 8px 10px;
+    transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    width: 250px;
+    height: 56px;
+    overflow: hidden;
+    user-select: none;
+}
+
+#gemini-extender-shortcut-fab:hover {
+    box-shadow: 0 8px 24px rgba(52, 168, 83, 0.5);
+    transform: translateY(-2px);
+}
+
+#gemini-extender-shortcut-fab .launcher-icon-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    flex-shrink: 0;
+    transition: transform 0.3s ease;
+}
+
+#gemini-extender-shortcut-fab:hover .launcher-icon-container {
+    transform: rotate(20deg) scale(1.1);
+}
+
+#gemini-extender-shortcut-fab .launcher-text-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    opacity: 1;
+    transform: scale(1);
+    white-space: nowrap;
+}
+
+#gemini-extender-shortcut-fab .launcher-title {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+}
+
+#gemini-extender-shortcut-fab .launcher-subtitle {
+    font-size: 10px;
+    opacity: 0.8;
+    margin-top: 1px;
+}
+
+/* Collapsed (FAB) State */
+#gemini-extender-shortcut-fab.collapsed {
+    width: 56px;
+    height: 56px;
+    padding: 0;
+    justify-content: center;
+    border-radius: 50%;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+#gemini-extender-shortcut-fab.collapsed:hover {
+    box-shadow: 0 6px 16px rgba(52, 168, 83, 0.5);
+}
+
+#gemini-extender-shortcut-fab.collapsed .launcher-icon-container {
+    background: transparent;
+    width: 56px;
+    height: 56px;
+}
+
+#gemini-extender-shortcut-fab.collapsed .launcher-text-container {
+    opacity: 0;
+    width: 0;
+    pointer-events: none;
+    transform: scale(0.8);
+    margin: 0;
+    overflow: hidden;
+}
+
+/* Tooltip style */
+#gemini-extender-shortcut-fab.collapsed::after {
+    content: "Inject Editor Prompt";
+    position: absolute;
+    right: 68px;
+    background: #202124;
+    color: white;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 500;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    transform: translateX(10px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+#gemini-extender-shortcut-fab.collapsed:hover::after {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+#gemini-extender-launcher {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 9999999;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: linear-gradient(135deg, #1a73e8, #7c4dff);
+    color: white;
+    border-radius: 28px;
+    box-shadow: 0 6px 20px rgba(26, 115, 232, 0.35);
+    cursor: pointer;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    box-sizing: border-box;
+    padding: 8px 16px 8px 10px;
+    transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    width: 250px;
+    height: 56px;
+    overflow: hidden;
+    user-select: none;
+}
+
+#gemini-extender-launcher:hover {
+    box-shadow: 0 8px 24px rgba(124, 77, 255, 0.5);
+    transform: translateY(-2px);
+}
+
+#gemini-extender-launcher .launcher-icon-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    flex-shrink: 0;
+    transition: transform 0.3s ease;
+}
+
+#gemini-extender-launcher:hover .launcher-icon-container {
+    transform: rotate(20deg) scale(1.1);
+}
+
+#gemini-extender-launcher .launcher-text-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    opacity: 1;
+    transform: scale(1);
+    white-space: nowrap;
+}
+
+#gemini-extender-launcher .launcher-title {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+}
+
+#gemini-extender-launcher .launcher-subtitle {
+    font-size: 10px;
+    opacity: 0.8;
+    margin-top: 1px;
+}
+
+/* Collapsed (FAB) State */
+#gemini-extender-launcher.collapsed {
+    width: 56px;
+    height: 56px;
+    padding: 0;
+    justify-content: center;
+    border-radius: 50%;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+#gemini-extender-launcher.collapsed:hover {
+    box-shadow: 0 6px 16px rgba(124, 77, 255, 0.5);
+}
+
+#gemini-extender-launcher.collapsed .launcher-icon-container {
+    background: transparent;
+    width: 56px;
+    height: 56px;
+}
+
+#gemini-extender-launcher.collapsed .launcher-text-container {
+    opacity: 0;
+    width: 0;
+    pointer-events: none;
+    transform: scale(0.8);
+    margin: 0;
+    overflow: hidden;
+}
+
+/* Tooltip style */
+#gemini-extender-launcher.collapsed::after {
+    content: "open sidepanel";
+    position: absolute;
+    right: 68px;
+    background: #202124;
+    color: white;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 500;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    transform: translateX(10px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+#gemini-extender-launcher.collapsed:hover::after {
+    opacity: 1;
+    transform: translateX(0);
+}
