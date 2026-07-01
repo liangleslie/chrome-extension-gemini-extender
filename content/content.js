@@ -22,6 +22,45 @@
 
     log("Loaded in Gemini webpage context");
 
+    // Load prompt templates from storage
+    let promptTemplates = {};
+    async function loadPromptTemplates() {
+        return new Promise((resolve) => {
+            chrome.storage.local.get({ savedPrompts: [], creatorPrompts: [] }, (result) => {
+                const prompts = result.savedPrompts || [];
+                const creatorPrompts = result.creatorPrompts || [];
+                // Build a map by prompt_name for easy lookup
+                const map = {};
+                const creatorMap = {}
+                prompts.forEach(p => {
+                    const name = p.prompt_name || p.act;
+                    if (name && p.final_prompt) {
+                        map[name] = p.final_prompt;
+                    }
+                });
+                creatorPrompts.forEach(p => {
+                    const name = p.prompt_name || p.act;
+                    if (name && p.final_prompt) {
+                        creatorMap[name] = p.final_prompt;
+                    }
+                });
+                promptTemplates = { "prompts": map, "creator_prompts": creatorMap };
+                log("Loaded prompt templates from storage:", Object.keys(promptTemplates));
+                resolve(promptTemplates);
+            });
+        });
+    }
+
+    // Initialize prompt templates on load
+    loadPromptTemplates();
+
+    // Listen for storage changes to reload templates
+    chrome.storage.onChanged.addListener((changes, namespace) => {
+        if (namespace === 'local' && changes.savedPrompts) {
+            loadPromptTemplates();
+        }
+    });
+
     async function injectFilesIntoGemini(fileDataArray) {
         log("Injecting files via Clipboard...");
 
@@ -141,50 +180,23 @@
     }
 
     async function handlePromptSubmission(promptText, isInitial) {
-        // ponytail: single unified handler ternary bypasses duplicating execution pipelines
-        const wrappedPrompt = isInitial ? `Help me develop an effective prompt.
-
-    Purpose and Goals:
-    * Apply prompt engineering patterns (e.g., Chain-of-Thought, Few-Shot, Role-Prompting).
-    * Assist me in developing optimized prompts by leveraging a comprehensive internal catalog of techniques.
-    * Ensure no prompt is proposed until all necessary context, constraints, and requirements are fully understood through iterative diagnostic questioning.
-
-    Behaviors and Rules:
-    1) Information Gathering:
-    a) Ask a maximum of 3 targeted questions per dialog turn to uncover the specific task, constraints, desired output format, and target audience.
-    b) Provide exactly 3 multiple-choice options for each question.
-    c) Leave the "final_prompt" JSON field empty if not confident.
-
-    2) Prompt Generation:
-    a) When confident, optimize the suggested prompt's efficiency.
-    b) Incorporate specific techniques like 'Least-to-Most prompting' or 'Self-Consistency' where applicable.
-    c) Populate the "final_prompt" field with the structured prompt.
-
-    Output results.json within a markdown codeblock:
-    { 
-    "initial_prompt": "<initial input prompt",
-    "current_phase": "Information Gathering | Prompt Generation", 
-    "questions": [
-        { 
-        "question": "<Question Text>", 
-        "options": ["Option A", "Option B", "Option C"] 
+        // Ensure prompt templates are loaded
+        if (Object.keys(promptTemplates).length === 0) {
+            await loadPromptTemplates();
         }
-    ], 
-    "final_prompt": 
-        {
-            "prompt_name": "<name of prompt>",
-            "final_prompt": "<The generated prompt, or null if not confident>", 
-            "category": "<category of prompt, e.g. writing, summarization, coding, etc.>", 
-            "tags": ["tag1", "tag2", "tag3"], 
-            "summary": "<summary of prompt>"
+
+        // Get the appropriate template from storage
+        const initialPromptTemplate = promptTemplates["creator_prompts"]["Prompt Engineering Wizard - Initial"];
+        const followupPromptTemplate = promptTemplates["creator_prompts"]["Prompt Engineering Wizard - Follow-up"];
+
+        if (!initialPromptTemplate || !followupPromptTemplate) {
+            return { success: false, error: "Prompt templates not loaded. Please refresh the page." };
         }
-    }
 
-    User Task:
-    "${promptText}"` : `Here are my preferences for the questions you asked:
-    ${promptText}
-
-    Evaluate this context. Continue with either the diagnostic "Information Gathering" phase (exactly 3 options for each question) or generate the finalized prompt inside the results.json schema if all operational boundaries have been mapped.`;
+        // Replace the placeholder with actual prompt text
+        const wrappedPrompt = isInitial
+            ? initialPromptTemplate + "\n" + promptText
+            : followupPromptTemplate + "\n" + promptText;
 
         if (!setChatInputText(wrappedPrompt)) {
             return { success: false, error: "DOM input injection failed." };

@@ -1,4 +1,4 @@
-0) move all hardcoded prompts to external base_prompt.js and ingest at install
+0) move all hardcoded prompts to external base_prompt.js and ingest at install - prevent prompt wizard prompts from being deleted; 
 
 1) shortcut prompt injectors e.g. editorial rules
 
