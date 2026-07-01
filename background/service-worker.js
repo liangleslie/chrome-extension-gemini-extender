@@ -34,7 +34,7 @@ function isGeminiUrl(url) {
 chrome.runtime.onInstalled.addListener(() => {
   chrome.sidePanel.setOptions({ enabled: false })
     .then(() => log("Side panel disabled globally by default."))
-    .catch(err => err("Error setting global side panel options:", err));
+    .catch(error => err("Error setting global side panel options:", error));
 });
 
 // Function to update the extension's enabled/disabled state for a tab
@@ -45,22 +45,22 @@ function updateTabState(tabId, url) {
       tabId: tabId,
       path: 'sidepanel/sidepanel.html',
       enabled: true
-    }).catch(err => err("Error enabling sidePanel:", err));
+    }).catch(error => err("Error enabling sidePanel:", error));
 
     // Enable action icon for this tab
     if (chrome.action && chrome.action.enable) {
-      chrome.action.enable(tabId).catch(err => err("Error enabling action:", err));
+      chrome.action.enable(tabId).catch(error => err("Error enabling action:", error));
     }
   } else {
     // Disable side panel for this tab
     chrome.sidePanel.setOptions({
       tabId: tabId,
       enabled: false
-    }).catch(err => err("Error disabling sidePanel:", err));
+    }).catch(error => err("Error disabling sidePanel:", error));
 
     // Disable action icon for this tab
     if (chrome.action && chrome.action.disable) {
-      chrome.action.disable(tabId).catch(err => err("Error disabling action:", err));
+      chrome.action.disable(tabId).catch(error => err("Error disabling action:", error));
     }
   }
 }
@@ -87,8 +87,8 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
         // Clean up the ephemeral state
         await chrome.storage.session.remove(sessionKey);
       }
-    } catch (err) {
-      err("Error retrieving prepopulation payload:", err);
+    } catch (error) {
+      err("Error retrieving prepopulation payload:", error);
     }
   }
 });
@@ -103,9 +103,9 @@ chrome.tabs.onActivated.addListener((activeInfo) => {
       chrome.sidePanel.setOptions({
         tabId: activeInfo.tabId,
         enabled: false
-      }).catch(err => { });
+      }).catch(error => { });
       if (chrome.action && chrome.action.disable) {
-        chrome.action.disable(activeInfo.tabId).catch(err => { });
+        chrome.action.disable(activeInfo.tabId).catch(error => { });
       }
     }
   });
@@ -155,7 +155,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           path: 'sidepanel/sidepanel.html',
           enabled: true
         });
-      }).catch(err => err("Error toggling sidepanel state on refresh:", err));
+      }).catch(error => err("Error toggling sidepanel state on refresh:", error));
       sendResponse({ success: true });
       return true;
     }
@@ -181,9 +181,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         chrome.tabs.sendMessage(tab.id, { action: 'INJECT_FILES_DATA', payload: fileDataArray }, (resp) => {
           sendResponse(resp);
         });
-      } catch (err) {
-        err('Error reading asset files:', err);
-        sendResponse({ success: false, error: err.toString() });
+      } catch (error) {
+        err('Error reading asset files:', error);
+        sendResponse({ success: false, error: error.toString() });
       }
     })();
     return true;
@@ -218,9 +218,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         await chrome.tabs.update(tab.id, { url: 'https://gemini.google.com/gems/create' });
         sendResponse({ success: true });
 
-      } catch (err) {
-        err('Error initiating navigation routing:', err);
-        sendResponse({ success: false, error: err.toString() });
+      } catch (error) {
+        err('Error initiating navigation routing:', error);
+        sendResponse({ success: false, error: error.toString() });
       }
     })();
     return true;

@@ -317,9 +317,9 @@
             const isInitial = request.action === "SUBMIT_PROMPT_INITIAL";
             handlePromptSubmission(request.payload, isInitial)
                 .then((result) => sendResponse(result))
-                .catch(err => {
-                    err("Execution pipeline error:", err);
-                    sendResponse({ success: false, error: err.toString() });
+                .catch(error => {
+                    err("Execution pipeline error:", error);
+                    sendResponse({ success: false, error: error.toString() });
                 });
             return true;
         }
@@ -334,9 +334,9 @@
         if (request.action === "PREPOPULATE_GEM") {
             handleGemPrepopulation(request.payload)
                 .then(() => sendResponse({ success: true }))
-                .catch(err => {
-                    err("Gem prepopulation failed:", err);
-                    sendResponse({ success: false, error: err.toString() });
+                .catch(error => {
+                    err("Gem prepopulation failed:", error);
+                    sendResponse({ success: false, error: error.toString() });
                 });
             return true;
         }
@@ -348,7 +348,7 @@
         if (document.getElementById('gemini-extender-launcher')) return;
 
         // Notify service worker of page reload to close stale sidepanel window
-        chrome.runtime.sendMessage({ action: 'PAGE_RELOADED' }).catch(err => log("PAGE_RELOADED error:", err));
+        chrome.runtime.sendMessage({ action: 'PAGE_RELOADED' }).catch(error => log("PAGE_RELOADED error:", error));
 
         // Create style element
         const styleEl = document.createElement('style');
@@ -492,7 +492,7 @@
             const currentState = launcher.getAttribute('data-state');
             if (currentState === 'open') {
                 launcher.setAttribute('data-state', 'closed');
-                chrome.runtime.sendMessage({ action: 'CLOSE_SIDEPANEL' }).catch(err => { });
+                chrome.runtime.sendMessage({ action: 'CLOSE_SIDEPANEL' }).catch(error => { });
             } else {
                 launcher.setAttribute('data-state', 'open');
                 chrome.runtime.sendMessage({ action: 'OPEN_SIDEPANEL' }, (response) => {

@@ -765,8 +765,8 @@ document.addEventListener('DOMContentLoaded', () => {
         categoryIn.addEventListener('click', () => {
             try {
                 categoryIn.showPicker();
-            } catch (err) {
-                err("Native picker not supported or ready:", err);
+            } catch (error) {
+                err("Native picker not supported or ready:", error);
             }
         });
     };
